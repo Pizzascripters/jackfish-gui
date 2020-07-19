@@ -1,0 +1,31 @@
+{
+  "name": "blackjackengine",
+  "version": "1.0.0",
+  "description": "An engine for determining odds and perfect strategy for different variations of blackjack and different counting systems",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pizzascripters/BlackjackEngine.git"
+  },
+  "keywords": [
+    "blackjack",
+    "cards",
+    "statistics",
+    "game-theory",
+    "gambling",
+    "card-counting"
+  ],
+  "author": "Nik Olson",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Pizzascripters/BlackjackEngine/issues"
+  },
+  "homepage": "https://github.com/Pizzascripters/BlackjackEngine#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "react": "^16.13.1"
+  }
+}
