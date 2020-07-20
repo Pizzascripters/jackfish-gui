@@ -37,6 +37,7 @@ const COLOR_MAP = {
   'R': '#ffffff',
 }
 
+let engine; // ONLY FOR DEBUGGING. REMOVE IN PRODUCTION
 function init() {
   const cvs = document.getElementById('cvs');
   const ctx = cvs.getContext('2d');
@@ -51,14 +52,17 @@ function init() {
   window.addEventListener('resize', fullscreen);
   fullscreen();
 
-  let state = {};
+  engine = new Engine({
+    count: new Count('hilo', 0, 2),
+    soft17: true,
+    spanish: false,
+  }); // USE LET IN PRODUCTION
 
-  frame.bind(state, ctx)();
+  frame.bind(engine, ctx)();
 }
 
 function frame(ctx) {
   ctx.clearRect(0, 0, cvs.width, cvs.height);
-
 
   ctx.fillStyle = '#000000';
   ctx.font = '12px Arial';
