@@ -119,7 +119,7 @@ function dealerMatrix(soft17, spanish, count) {
       let v = j + 1;
       if((hand === -3 || soft && value === 11) && value + v === 21) return; // Skip blackjack
       if(j === 0 && value === 10) {
-        // 10 + Ace (more than 2 cards) eg. 3,7,A
+        // 10 + Ace (more than 2 cards) eg. 3+7+A or 2+4+4+A
         addTransition(i, 21, probability);
       } else if(j === 0 && value < 11) {
         // <11 to soft hand

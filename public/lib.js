@@ -27,17 +27,29 @@ function zeroes(dims) {
 /* Mathy functions */
 
 function dot(u, v) {
-  let w = 0;
-  for(let i in u) {
-    w += u[i] * v[i];
-  }
-  return w;
+  return u.reduce((r, x, i) => r + x * v[i], 0);
+}
+
+function transpose(a) {
+  let b = [];
+  loop(0, a[0].length, j => {
+    b.push([]);
+    loop(0, a.length, i => b[j].push(a[i][j]));
+  });
+  return b;
 }
 
 // mmultiply(vec, matrix) or mmultiply(matrix, matrix)
 function mmultiply(v, a) {
   if(v[0] && v[0].length !== undefined) {
-    // TODO
+    let c = [];
+    a = transpose(a);
+    // v times a
+    v.forEach((row, i) => {
+      c.push([]);
+      a.forEach((col, j) => c[i].push(dot(row, col)));
+    });
+    return c;
   } else {
     let w = [];
     for(let u of a) {
@@ -45,4 +57,11 @@ function mmultiply(v, a) {
     }
     return w;
   }
+}
+
+// Raise a matrix to a positive integer power (n>0)
+function mpower(a, n) {
+  let p = a;
+  loop(1, n, () => p = mmultiply(p, a));
+  return p;
 }
