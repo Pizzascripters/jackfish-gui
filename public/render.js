@@ -53,7 +53,7 @@ function init() {
   fullscreen();
 
   engine = new Engine({
-    count: new Count('hilo', 0, 1),
+    count: new Count('hilo', -6, 1),
     soft17: true,
     spanish: false,
   }); // USE LET IN PRODUCTION

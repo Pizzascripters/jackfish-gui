@@ -1,0 +1,91 @@
+Count = -6
+- Hit on 11,9
+- Hit on 13,5
+- Hit on 14,3
+- Hit on *14,6
+- Stand on 99,3
+
+Count = -5
+- Hit on 9,5
+- Hit on 10,8
+- Hit on 11,10
+- Hit on 13,4
+- Hit on 14,2
+- Hit on 17,A
+- Hit on *15,5
+- Hit on *17,3
+- Hit on 44,6
+- Hit on 66,3
+
+Count = -4
+- Hit on 12,6
+- Hit on *16,4
+- Stand on *18,3
+- Hit on 22,2
+- Hit on 33,3
+- Stand on 99,2
+
+Count = -3
+- Hit on 9,4
+- Hit on 13,3
+- Hit on *13,6
+- Hit on 66,2
+
+Count = -2:
+- Hit on 10,9
+- Hit on 12,5
+- Hit on 13,2
+- Hit on *14,5
+- Hit on 88,A
+
+Count = -1:
+- Hit on 11,A
+- Hit on 12,4
+- Hit on *12
+- Hit on *13,5
+- Hit on *15,4
+- Stand on *18,2
+- Stand on *19,6
+- Hit on 33,2
+- Hit on 44,5
+
+Count = 1:
+- Double on 9,2
+- Stand on 12,3
+- Stand on 16,10
+
+Count = 2:
+- Double on 8,6
+- Double on *12,5
+- Double on *17,2
+- Double on *19,5
+
+Count = 3:
+- Double on 10,A
+- Split on 44,4
+- Split on 99,A
+
+Count = 4:
+- Double on 8,5
+- Double on 9,7
+- Double on 10,10
+- Stand on 16,A
+- Double on *13,4
+- Double on *19,4
+- Double on *20,6
+- Split on 22,8
+- Split on 99,7
+- Split on 1010,6
+
+Count = 5:
+- Stand on 15,10
+- Stand on 16,9
+- Double on *12,4
+- Double on *20,5
+- Split on 1010,5
+
+Count = 6:
+- Double on 8,4
+- Stand on 15,A
+- Double on *19,3
+- Split on 33,8
