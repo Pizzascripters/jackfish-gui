@@ -3,7 +3,7 @@ const PLAYER_HANDS = (() => {
   let hard = [],
       soft = [],
       splits = [];
-  for(let v = 2; v <= 20; v++) {
+  for(let v = 5; v <= 20; v++) {
     hard.push(String(v));
   }
   for(let v = 12; v <= 20; v++) {
@@ -53,7 +53,7 @@ function init() {
   fullscreen();
 
   engine = new Engine({
-    count: new Count('hilo', 0, 2),
+    count: new Count('hilo', 0, 1),
     soft17: true,
     spanish: false,
   }); // USE LET IN PRODUCTION
@@ -97,15 +97,23 @@ function frame(ctx) {
   // Cells
   let table = engine.getTable();
   table.forEach((row, i) => {
-
     row.forEach((cell, j) => {
-      let hand = HAND_STATES[i]; // Player hand
-      let card = CARD_STATES[j]; // Dealer card
-      let [value, soft] = getHandDetails(hand);
+      if(i <= 30) {
+        let hand = HAND_STATES[i]; // Player hand
+        let card = CARD_STATES[j]; // Dealer card
+        let [value, soft] = getHandDetails(hand);
 
-      if(hand > 0 && hand !== 43 && hand !== 21) {
+        if(hand > 4 && hand !== 43 && hand !== 21) {
+          let x = (j + 9) % 10;
+          let y = value + (10 * soft/32) - 5;
+          drawSquare(cell[0], x, y);
+        }
+      } else {
+        let hand = i-30; // Player hand
+        let card = CARD_STATES[j]; // Dealer card
+
         let x = (j + 9) % 10;
-        let y = value + (10 * soft/32) - 2;
+        let y = (hand + 8) % 10 + 27;
         drawSquare(cell[0], x, y);
       }
     });
