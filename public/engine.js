@@ -43,9 +43,48 @@ function Engine(params) {
   // Calculate player's return by doubling
   let doubleM = doubleReturns(endM, standM, odds);
 
-  this.bestMove = (player, dealer) => {
-    let i = HAND_STATES.indexOf(player);
-    let j = DEALER_STATES.indexOf(dealer);
+  /* Table generation processes */
+
+  let table = [[]];
+  let state = 0;
+  let dealer = 0;
+  let working = false;
+  let finished = false;
+
+  // Start or continue table generation
+  this.start = () => {
+    working = true;
+    work();
+  }
+
+  // Pause creation of the table
+  this.pause = () => {
+    working = false;
+  }
+
+  function work() {
+    if(finished) return;
+
+    table[state][dealer] = bestMove(state, dealer);
+    // Advance to next cell
+    if(++dealer === CARD_STATES.length) {
+      if(++state === HAND_STATES.length) {
+        finished = true;
+      } else {
+        table[state] = [];
+        dealer = 0;
+      }
+    }
+
+    // Call again
+    new Promise(() => {
+      if(working) {
+        work();
+      }
+    });
+  }
+
+  function bestMove(i, j) {
     let stand = standM[i][j];
     let double = doubleM[i][j];
 
@@ -55,13 +94,23 @@ function Engine(params) {
 
     // TODO: Calculate player's return on bet by splitting
 
-    // TODO: Compare returns and return best
-    return ['S', stand];
+    // Compare returns and return best
+    if(stand > double) {
+      return ['S', stand];
+    } else {
+      return ['D', double];
+    }
   }
+  this.bestMove = (player, dealer) => {
+    let i = HAND_STATES.indexOf(player);
+    let j = DEALER_STATES.indexOf(dealer);
+    return bestMove(i, j);
+  };
 
   this.getStand = () => standM;
   this.getDouble = () => doubleM;
   this.getOdds = () => odds;
+  this.getTable = () => table;
 }
 
 // Constructor for the count
@@ -174,60 +223,6 @@ function hitMatrix(odds) {
   return a;
 }
 
-// // Create transition matrix for hand states
-// function transitionMatrix(spanish, count, params) {
-//   let odds = drawOdds(spanish, count);
-//   let a = zeroes([HAND_STATES.length, HAND_STATES.length]);
-//
-//   function addTransition(i, value, weight) {
-//     let j = HAND_STATES.indexOf(value);
-//     a[i][j] += weight;
-//   }
-//
-//   for(let i in HAND_STATES) {
-//     let hand = HAND_STATES[i];
-//     let [value, soft] = getHandDetails(hand);
-//
-//     if(params.endCondition && params.endCondition(value, soft, hand)) {
-//       // End state
-//       a[i][i] = 1;
-//       continue;
-//     }
-//
-//     let weight = 1;
-//     if(params.weights) {
-//       weight.forEach(w => {
-//         if(w.condition(value, soft, hand)) {
-//           weight = w.getWeight(odds);
-//         }
-//       });
-//     }
-//
-//     odds.forEach((probability, j) => {
-//       let v = j + 1;
-//       if(params.skip && params.skip(soft, value, hand, v)) return;
-//       if(value + v === 21) {
-//         // 21
-//         addTransition(i, 21, probability);
-//       } else if(j === 0 && value < 11) {
-//         // <11 to soft hand
-//         addTransition(i, value + 43, probability);
-//       } else if(soft && value + v > 21) {
-//         // Ace goes from 10 -> 1
-//         addTransition(i, value + v - 10, probability);
-//       } else if(value + v > 21) {
-//         // Bust
-//         addTransition(i, -2, probability);
-//       } else {
-//         // hard -> hard or soft -> soft
-//         addTransition(i, value + v + soft, weight * probability);
-//       }
-//     });
-//   }
-//
-//   return a;
-// }
-
 function dealerMatrix(odds, soft17) {
   let a = hitMatrix(odds);
 
@@ -273,7 +268,12 @@ function standReturns(endMatrix) {
       endOdds.forEach((odds, k) => {
         let dHand = HAND_STATES[k];
         v = getHandDetails(dHand)[0]; // Dealer value
-        r += odds * ((value > v) - (value < v));
+        if(hand === -2) {
+          // If player busts, they just lose
+          r -= 1;
+        } else {
+          r += odds * ((value > v) - (value < v));
+        }
       });
 
       a[i].push(r);

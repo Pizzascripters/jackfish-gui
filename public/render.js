@@ -62,6 +62,8 @@ function init() {
 }
 
 function frame(ctx) {
+  engine.start();
+
   ctx.clearRect(0, 0, cvs.width, cvs.height);
 
   ctx.fillStyle = '#000000';
@@ -89,13 +91,27 @@ function frame(ctx) {
 
   function drawSquare(action, x, y) {
     ctx.fillStyle = COLOR_MAP[action];
-    ctx.fillRect(100 + spacing*(x+1), TABLE_MARGIN + spacing*(y+1), spacing, spacing);
+    ctx.fillRect(100 + spacing*(x+1), TABLE_MARGIN + spacing*(y+1), spacing+1, spacing+1);
   }
-  drawSquare('H', 0, 0);
-  drawSquare('D', 1, 0);
-  drawSquare('d', 0, 1);
-  drawSquare('S', 1, 1);
 
+  // Cells
+  let table = engine.getTable();
+  table.forEach((row, i) => {
+
+    row.forEach((cell, j) => {
+      let hand = HAND_STATES[i]; // Player hand
+      let card = CARD_STATES[j]; // Dealer card
+      let [value, soft] = getHandDetails(hand);
+
+      if(hand > 0 && hand !== 43 && hand !== 21) {
+        let x = (j + 9) % 10;
+        let y = value + (10 * soft/32) - 2;
+        drawSquare(cell[0], x, y);
+      }
+    });
+  });
+
+  engine.pause();
   window.requestAnimationFrame(frame.bind(this, ctx));
 }
 
