@@ -53,7 +53,7 @@ function init() {
   fullscreen();
 
   engine = new Engine({
-    count: new Count('hilo', -6, 1),
+    count: new Count('hilo', 0, 1),
     soft17: true,
     spanish: false,
   }); // USE LET IN PRODUCTION
@@ -109,7 +109,7 @@ function frame(ctx) {
           drawSquare(cell[0], x, y);
         }
       } else {
-        let hand = i-30; // Player hand
+        let hand = i - 32; // Player hand
         let card = CARD_STATES[j]; // Dealer card
 
         let x = (j + 9) % 10;

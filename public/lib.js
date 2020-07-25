@@ -6,6 +6,13 @@ function loop(start, end, f) {
   }
 }
 
+// Like loop but in reverse
+function rLoop(start, end, f) {
+  for(let i = start; i > end; i--) {
+    f(i);
+  }
+}
+
 function fillArray(value, len) {
   let a = [];
   if(typeof value === 'function') {

@@ -1,6 +1,6 @@
 /* Odds constants */
 // [spanish, standard]
-const CARD_ODDS = [1/12, 1/13]; // The odds that we draw any given card
+const CARD_ODDS = [1/12, 1/13]; // The odds that we draw a non-ten given card
 const TEN_ODDS = [3/12, 4/13];
 const ACE_HIGH_RATIO = [1/4, 1/5]; // Aces : high cards
 const TEN_HIGH_RATIO = [3/4, 4/5]; // Ten : high cards
@@ -20,7 +20,7 @@ const HAND_STATES = (() => {
   return a;
 })();
 // The order we should determine the best moves
-const HAND_ORDER = [-2, -1, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 0, 107, 66, 67, 68, 69, 70, 71, 72, 73, 74];
+const HAND_ORDER = [-2, -1, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 0, 108, 68, 70, 72, 74, 76, 78, 80, 82, 84];
 // All possible hands the dealer can start with
 const DEALER_STATES = HAND_STATES.filter(hand => hand > 0 && hand < 10 || hand === 43 || hand === -3);
 
@@ -28,7 +28,7 @@ function Engine(params) {
   let odds = drawOdds(params.spanish, params.count);
 
   // Return matrix. Specifies return given player's hand and dealer's card under perfect play
-  let rM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
+  let rM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return without doubling
   let rdM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with doubling
   let hitM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
 
@@ -51,10 +51,9 @@ function Engine(params) {
 
   /* Table generation processes */
 
-  let table = [];
-  let state = 0;
-  let orderI = 3; // Iterator for the state
-  let dealer = 0;
+  let table = []; // table[i][j]
+  let j = 0; // Dealer card
+  let k = 3; // Index HAND_ORDER
   let working = false;
   let finished = false;
 
@@ -72,41 +71,33 @@ function Engine(params) {
   function work() {
     if(finished) return;
 
-    if(orderI < 34) {
-      // Hard and soft non-pair hands
-      state = HAND_STATES.indexOf(HAND_ORDER[orderI]);
-      if(!table[state]) {
-        table[state] = [];
-      }
-      table[state][dealer] = bestMove(state, dealer);
-      rdM[state][dealer] = table[state][dealer][1];
-      rM[state][dealer] = Math.max(standM[state][dealer], hitM[state][dealer]);
+    // Calculate returns and best move
+    let state = HAND_ORDER[k];
+    let i,i_;
+    if(state & 64) {
+      // Pair
+      // We subtract 1 because -3 isn't included in HAND_ORDER
+      i = HAND_STATES.length - 1 + k - HAND_ORDER.indexOf(108);
+      i_ = HAND_STATES.indexOf(state & 63);
     } else {
-      // Pairs / splitting
-      state = orderI - 3;
-      if(!table[state]) {
-        table[state] = [];
-      }
-      let pre = HAND_STATES.indexOf((HAND_ORDER[orderI] & 63) * 2); // Before split
-      if(HAND_ORDER[orderI] & 32) {
-        pre = HAND_STATES.indexOf(12 + 32) // Two aces
-      }
-      let post = HAND_STATES.indexOf(HAND_ORDER[orderI] & 63); // After split
-      let r = rdM[pre][dealer];
-      let rs = splitReturns(post, transpose(rdM)[dealer], odds);
-      if(r > rs) {
-        table[state][dealer] = table[pre][dealer];
-      } else {
-        table[state][dealer] = ['P', rs]
-      }
+      i_ = i = HAND_STATES.indexOf(state);
+    }
+    if(!table[i]) {
+      table[i] = [];
+    }
+    table[i][j] = bestMove(i_, j, state & 64);
+    if(!(state & 64)) {
+      // Only store return for non-pairs
+      rdM[i][j] = table[i][j][1];
+      rM[i][j] = Math.max(standM[i][j], hitM[i][j]);
     }
 
     // Advance to next cell
-    if(++dealer === CARD_STATES.length) {
-      if(++orderI === HAND_ORDER.length) {
+    if(++j === CARD_STATES.length) {
+      if(++k === HAND_ORDER.length) {
         finished = true;
       } else {
-        dealer = 0;
+        j = 0;
       }
     }
 
@@ -118,20 +109,28 @@ function Engine(params) {
     });
   }
 
-  function bestMove(i, j) {
+  function bestMove(i, j, pair) {
     let stand = standM[i][j];
     let double = doubleM[i][j];
 
-    // TODO: Calculate player's return on bet by hitting
+    // Calculate return by hitting
     let hit = hitReturns(i, transpose(rM)[j], odds);
     hitM[i][j] = hit;
 
-    // TODO: Calculate player's return on bet by surrendering
+    // TODO: Calculate return by surrendering
 
-    // TODO: Calculate player's return on bet by splitting
+    // Calculate return by splitting
+    let split = -Infinity;
+    if(pair) {
+      let pre = HAND_STATES[i]; // State before splitting
+      let post = pre === 44 ? 43 : pre / 2; // State after splitting
+      split = splitReturns(HAND_STATES.indexOf(post), transpose(rdM)[j], odds);
+    }
 
     // Compare returns and return best
-    if(hit > stand && hit > double) {
+    if(split > hit && split > stand && split > double) {
+      return ['P', split];
+    } else if(hit > stand && hit > double) {
       return ['H', hit];
     } else if(stand > double) {
       return ['S', stand];
@@ -141,10 +140,10 @@ function Engine(params) {
       return ['d', double];
     }
   }
-  this.bestMove = (player, dealer) => {
+  this.bestMove = (player, dealer, split) => {
     let i = HAND_STATES.indexOf(player);
     let j = DEALER_STATES.indexOf(dealer);
-    return bestMove(i, j);
+    return bestMove(i, j, split);
   };
 
   this.getDouble = () => doubleM;
@@ -255,13 +254,11 @@ function hitMatrix(odds) {
   let a = [];
   HAND_STATES.forEach((hand, i) => {
     a[i] = [];
-    HAND_STATES.forEach((hand, j) => {
-      let sum = 0;
-      CARD_STATES.forEach((card, k) => {
-        sum += odds[k] * (P[i][k] === hand);
-      });
-      a[i][j] = sum;
-    });
+    HAND_STATES.forEach((hand, j) =>
+      a[i][j] = CARD_STATES.reduce((sum, card, k) =>
+        sum + odds[k] * (P[i][k] === hand), 0
+      )
+    );
   });
 
   return a;
