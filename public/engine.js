@@ -76,7 +76,7 @@ function Engine(params) {
     let i,i_;
     if(state & 64) {
       // Pair
-      // We subtract 1 because -3 isn't included in HAND_ORDER
+      // We subtract 1 because state=-3 isn't included in HAND_ORDER
       i = HAND_STATES.length - 1 + k - HAND_ORDER.indexOf(108);
       i_ = HAND_STATES.indexOf(state & 63);
     } else {
@@ -110,6 +110,8 @@ function Engine(params) {
   }
 
   function bestMove(i, j, pair) {
+    let state = HAND_STATES[i];
+    let dealer = CARD_STATES[j];
     let stand = standM[i][j];
     let double = doubleM[i][j];
 
@@ -117,27 +119,36 @@ function Engine(params) {
     let hit = hitReturns(i, transpose(rM)[j], odds);
     hitM[i][j] = hit;
 
-    // TODO: Calculate return by surrendering
-
     // Calculate return by splitting
     let split = -Infinity;
     if(pair) {
-      let pre = HAND_STATES[i]; // State before splitting
-      let post = pre === 44 ? 43 : pre / 2; // State after splitting
+      let post = state === 44 ? 43 : state / 2; // State after splitting
       split = splitReturns(HAND_STATES.indexOf(post), transpose(rdM)[j], odds);
+    }
+
+    // Decide whether to surrender if possible
+    let ret = Math.max(split, hit, stand, double); // Return of best move
+    let sur = (params.surrender === 'late' || params.surrender === 'early' && dealer !== 1 && dealer !== 10) &&
+              ret < -.5;
+    if(params.surrender === 'early' && dealer === 1) {
+      let bjOdds = odds[CARD_STATES.indexOf(10)];
+      sur = ret * (1 - bjOdds) - bjOdds < -.5;
+    } else if(params.surrender === 'early' && dealer === 10) {
+      let bjOdds = odds[CARD_STATES.indexOf(1)];
+      sur = ret * (1 - bjOdds) - bjOdds < -.5;
     }
 
     // Compare returns and return best
     if(split > hit && split > stand && split > double) {
-      return ['P', split];
+      return ['P', split, sur];
     } else if(hit > stand && hit > double) {
-      return ['H', hit];
+      return ['H', hit, sur];
     } else if(stand > double) {
-      return ['S', stand];
+      return ['S', stand, sur];
     } else if(hit > stand) {
-      return ['D', double];
+      return ['D', double, sur];
     } else {
-      return ['d', double];
+      return ['d', double, sur];
     }
   }
   this.bestMove = (player, dealer, split) => {

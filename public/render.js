@@ -34,7 +34,11 @@ const COLOR_MAP = {
   'd': '#00ffff',
   'S': '#ffff00',
   'P': '#00ff00',
-  'R': '#ffffff',
+  'Rd': '#ccffff',
+  'RD': '#ccccff',
+  'RH': '#cccccc',
+  'RP': '#ccffcc',
+  'RS': '#f0f0f0'
 }
 
 let engine; // ONLY FOR DEBUGGING. REMOVE IN PRODUCTION
@@ -56,6 +60,7 @@ function init() {
     count: new Count('hilo', 0, 1),
     soft17: true,
     spanish: false,
+    surrender: 'early'
   }); // USE LET IN PRODUCTION
 
   frame.bind(engine, ctx)();
@@ -89,7 +94,11 @@ function frame(ctx) {
     y += spacing;
   }
 
-  function drawSquare(action, x, y) {
+  function drawSquare(cell, x, y) {
+    let action = cell[0]
+    if(cell[2]) {
+      action = 'R' + cell[0];
+    }
     ctx.fillStyle = COLOR_MAP[action];
     ctx.fillRect(100 + spacing*(x+1), TABLE_MARGIN + spacing*(y+1), spacing+1, spacing+1);
   }
@@ -106,7 +115,7 @@ function frame(ctx) {
         if(hand > 4 && hand !== 43 && hand !== 21) {
           let x = (j + 9) % 10;
           let y = value + (10 * soft/32) - 5;
-          drawSquare(cell[0], x, y);
+          drawSquare(cell, x, y);
         }
       } else {
         let hand = i - 32; // Player hand
@@ -114,7 +123,7 @@ function frame(ctx) {
 
         let x = (j + 9) % 10;
         let y = (hand + 8) % 10 + 27;
-        drawSquare(cell[0], x, y);
+        drawSquare(cell, x, y);
       }
     });
   });
