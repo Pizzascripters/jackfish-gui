@@ -16,15 +16,44 @@ const PLAYER_HANDS = (() => {
 })();
 const NUM_PLAYER_HANDS = PLAYER_HANDS.map(x => x.length).reduce((a, b) => a + b);
 
-// Maps values to card names
+// Maps values to card and hand names
 const VALUE_MAP = (() => {
   let o = {};
-  for(let v = 2; v <= 10; v++) {
-    o[v] = CARD_NAMES[v-2];
+  for(let v = 2; v <= 20; v++) {
+    o[v] = String(v);
   }
-  o[43] = 'A';
+  for(let v = 12; v <= 20; v++) {
+    o[v+32] = String(v)+'\'';
+  }
+  for(let v = 2; v <= 10; v++) {
+    o[v+64] = String(v)+',';
+  }
+  o[43] = o[1] = 'A';
+  o[107] = 'A,';
   return o;
 })();
+
+// Maps jackfish actions to table actions
+const ACTION_MAP = {
+  'H': 'H',
+  'S': 'S',
+  'D': 'Dh',
+  'd': 'Ds',
+  'P': 'P',
+  'RH': 'Rh',
+  'RS': 'Rs',
+  'RP': 'Rp'
+}
+const ACTION_CLASSES = {
+  'H': 'hit',
+  'S': 'stand',
+  'Dh': 'doublehit',
+  'Ds': 'doublestand',
+  'P': 'split',
+  'Rh': 'surrenderhit',
+  'Rs': 'surrenderstand',
+  'Rp': 'surrendersplit'
+}
 
 /* Graphical constants */
 const TABLE_MARGIN = 50;
@@ -43,64 +72,28 @@ const COLOR_MAP = {
 
 let engine; // ONLY FOR DEBUGGING. REMOVE IN PRODUCTION
 function init() {
-  const cvs = document.getElementById('cvs');
-  const ctx = cvs.getContext('2d');
-
-  document.body.style.margin = '0px';
-  document.body.style.overflow = 'hidden';
-
-  function fullscreen() {
-    cvs.width = window.innerWidth;
-    cvs.height = window.innerHeight;
-  }
-  window.addEventListener('resize', fullscreen);
-  fullscreen();
-
   engine = new Engine({
-    count: new Count('hilo', 1, 1),
+    count: new Count('hilo', 0, 1),
     soft17: true,
     spanish: false,
-    surrender: 'late'
+    surrender: 'none'
   }); // USE LET IN PRODUCTION
 
-  frame.bind(engine, ctx)();
+  frame.bind(engine)();
 }
 
-function frame(ctx) {
+function frame() {
   engine.start();
 
-  ctx.clearRect(0, 0, cvs.width, cvs.height);
-
-  ctx.fillStyle = '#000000';
-  ctx.font = '12px Arial';
-  ctx.textBaseline = 'middle';
-  let spacing = (cvs.height - 2*TABLE_MARGIN) / (NUM_PLAYER_HANDS+3); // Size of one box
-
-  // Column headers
-  let x = 100 + spacing;
-  for(let card of CARD_NAMES) {
-    let w = ctx.measureText(card).width;
-    ctx.fillText(card, x + spacing/2 - w/2, TABLE_MARGIN);
-    x += spacing;
-  }
-
-  // Row headers
-  let y = TABLE_MARGIN + spacing;
-  for(let handGroup of PLAYER_HANDS) {
-    for(let hand of handGroup) {
-      ctx.fillText(hand, 100, y + spacing/2);
-      y += spacing;
-    }
-    y += spacing;
-  }
-
-  function drawSquare(cell, x, y) {
+  function drawSquare(cell, player, dealer) {
     let action = cell[0]
     if(cell[2]) {
       action = 'R' + cell[0];
     }
-    ctx.fillStyle = COLOR_MAP[action];
-    ctx.fillRect(100 + spacing*(x+1), TABLE_MARGIN + spacing*(y+1), spacing+1, spacing+1);
+    action = ACTION_MAP[action];
+    let box = document.getElementById(`${player}-${dealer}`);
+    box.className = ACTION_CLASSES[action];
+    box.innerText = action;
   }
 
   // Cells
@@ -113,23 +106,19 @@ function frame(ctx) {
         let [value, soft] = getHandDetails(hand);
 
         if(hand > 4 && hand !== 43 && hand !== 21) {
-          let x = (j + 9) % 10;
-          let y = value + (10 * soft/32) - 5;
-          drawSquare(cell, x, y);
+          drawSquare(cell, VALUE_MAP[hand], VALUE_MAP[card]);
         }
       } else {
-        let hand = i - 32; // Player hand
-        let card = CARD_STATES[j]; // Dealer card
+        let hand = VALUE_MAP[i - 32] + ','; // Player hand
+        let card = VALUE_MAP[CARD_STATES[j]]; // Dealer card
 
-        let x = (j + 9) % 10;
-        let y = (hand + 8) % 10 + 27;
-        drawSquare(cell, x, y);
+        drawSquare(cell, hand, card);
       }
     });
   });
 
   engine.pause();
-  window.requestAnimationFrame(frame.bind(this, ctx));
+  // window.requestAnimationFrame(frame.bind(this));
 }
 
 window.addEventListener('load', init);
