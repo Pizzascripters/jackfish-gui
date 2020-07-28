@@ -24,7 +24,7 @@ const HAND_ORDER = [-2, -1, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 52, 51, 50, 
 // All possible hands the dealer can start with
 const DEALER_STATES = HAND_STATES.filter(hand => hand > 0 && hand < 10 || hand === 43 || hand === -3);
 
-function Engine(params) {
+function Jackfish(params) {
   let odds = drawOdds(params.spanish, params.count);
 
   // Return matrix. Specifies return given player's hand and dealer's card under perfect play
@@ -51,64 +51,45 @@ function Engine(params) {
   // Calculate player's return by doubling
   let doubleM = doubleReturns(standM, odds);
 
-  /* Table generation processes */
+  this.getTable = () => {
+    let table = []; // table[i][j]
+    let j = 0; // Dealer card
+    let k = 3; // Index HAND_ORDER
+    let finished = false;
 
-  let table = []; // table[i][j]
-  let j = 0; // Dealer card
-  let k = 3; // Index HAND_ORDER
-  let working = false;
-  let finished = false;
-
-  // Start or continue table generation
-  this.start = () => {
-    working = true;
-    work();
-  }
-
-  // Pause creation of the table
-  this.pause = () => {
-    working = false;
-  }
-
-  function work() {
-    if(finished) return;
-
-    // Calculate returns and best move
-    let state = HAND_ORDER[k];
-    let i,i_;
-    if(state & 64) {
-      // Pair
-      // We subtract 1 because state=-3 isn't included in HAND_ORDER
-      i = HAND_STATES.length - 1 + k - HAND_ORDER.indexOf(108);
-      i_ = HAND_STATES.indexOf(state & 63);
-    } else {
-      i_ = i = HAND_STATES.indexOf(state);
-    }
-    if(!table[i]) {
-      table[i] = [];
-    }
-    table[i][j] = bestMove(i_, j, state & 64);
-    if(!(state & 64)) {
-      // Only store return for non-pairs
-      rdM[i][j] = table[i][j][1];
-      rM[i][j] = Math.max(standM[i][j], hitM[i][j]);
-    }
-
-    // Advance to next cell
-    if(++j === CARD_STATES.length) {
-      if(++k === HAND_ORDER.length) {
-        finished = true;
+    while(!finished) {
+      // Calculate returns and best move
+      let state = HAND_ORDER[k];
+      let i,i_;
+      if(state & 64) {
+        // Pair
+        // We subtract 1 because state=-3 isn't included in HAND_ORDER
+        i = HAND_STATES.length - 1 + k - HAND_ORDER.indexOf(108);
+        i_ = HAND_STATES.indexOf(state & 63);
       } else {
-        j = 0;
+        i_ = i = HAND_STATES.indexOf(state);
+      }
+      if(!table[i]) {
+        table[i] = [];
+      }
+      table[i][j] = bestMove(i_, j, state & 64);
+      if(!(state & 64)) {
+        // Only store return for non-pairs
+        rdM[i][j] = table[i][j][1];
+        rM[i][j] = Math.max(standM[i][j], hitM[i][j]);
+      }
+
+      // Advance to next cell
+      if(++j === CARD_STATES.length) {
+        if(++k === HAND_ORDER.length) {
+          finished = true;
+        } else {
+          j = 0;
+        }
       }
     }
 
-    // Call again
-    new Promise(() => {
-      if(working) {
-        work();
-      }
-    });
+    return table;
   }
 
   function bestMove(i, j, pair) {
@@ -189,7 +170,6 @@ function Engine(params) {
   this.getStand = () => standM;
   this.getCount = () => params.count;
   this.getOdds = () => odds;
-  this.getTable = () => table;
 }
 
 // Constructor for the count

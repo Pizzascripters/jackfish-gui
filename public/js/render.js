@@ -70,21 +70,17 @@ const COLOR_MAP = {
   'RS': '#f0f0f0'
 }
 
-let engine; // ONLY FOR DEBUGGING. REMOVE IN PRODUCTION
+let jackfish;
 function init() {
-  engine = new Engine({
+  render.bind(jackfish = new Jackfish({
     count: new Count('hilo', 0, 1),
     soft17: true,
     spanish: false,
     surrender: 'none'
-  }); // USE LET IN PRODUCTION
-
-  frame.bind(engine)();
+  }))();
 }
 
-function frame() {
-  engine.start();
-
+function render() {
   function drawSquare(cell, player, dealer) {
     let action = cell[0]
     if(cell[2]) {
@@ -97,7 +93,7 @@ function frame() {
   }
 
   // Cells
-  let table = engine.getTable();
+  let table = this.getTable();
   table.forEach((row, i) => {
     row.forEach((cell, j) => {
       if(i <= 30) {
@@ -116,9 +112,6 @@ function frame() {
       }
     });
   });
-
-  engine.pause();
-  // window.requestAnimationFrame(frame.bind(this));
 }
 
 window.addEventListener('load', init);

@@ -1,5 +1,5 @@
 import React from 'react';
-import './Table.css';
+import './style.css';
 
 /* Card Constants */
 const CARD_NAMES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
@@ -25,9 +25,9 @@ function Box(props) {
 
 function TableHead() {
   return <div className='row'>
-    <div className='label'></div>
+    <div key={CARD_NAMES.length} className='label'></div>
     {CARD_NAMES.map((card, i) => {
-      return <div className='label'>{card}</div>
+      return <div key={i} className='label'>{card}</div>
     })}
   </div>;
 }
