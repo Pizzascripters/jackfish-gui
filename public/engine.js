@@ -44,6 +44,8 @@ function Engine(params) {
     rdM[j][i] = rM[j][i] = standM[j][i];
     j = HAND_STATES.indexOf(-2);
     rdM[j][i] = rM[j][i] = -1;
+    j = HAND_STATES.indexOf(-1);
+    rdM[j][i] = rM[j][i] = 1.5;
   });
 
   // Calculate player's return by doubling
@@ -156,6 +158,29 @@ function Engine(params) {
     let j = DEALER_STATES.indexOf(dealer);
     return bestMove(i, j, split);
   };
+
+  // Positive number indicates player has an edge
+  this.getEdge = (j) => {
+    if(j === undefined) {
+      let edge = 0;
+      loop(0, CARD_STATES.length, i => {
+        edge += odds[i] * this.getEdge(i);
+      });
+      return 100 * edge;
+    } else {
+      let state = mpower(hitMatrix(odds), 2)[HAND_STATES.indexOf(0)];
+      state[HAND_STATES.indexOf(-1)] = state[HAND_STATES.indexOf(21)]; // 21 after 2 cards is blackjack
+      state[HAND_STATES.indexOf(21)] = 0;
+      let bjOdds = 0;
+      if(CARD_STATES[j] === 1) {
+        bjOdds = odds[CARD_STATES.indexOf(10)];
+      } else if(CARD_STATES[j] === 10) {
+        bjOdds = odds[CARD_STATES.indexOf(1)];
+      }
+      let r = dot(state, transpose(rdM)[j]);
+      return r * (1 - bjOdds) - bjOdds;
+    }
+  }
 
   this.getDouble = () => doubleM;
   this.getHit = () => hitM;
@@ -321,7 +346,6 @@ function standReturns(endMatrix) {
         let dHand = HAND_STATES[k];
         v = getHandDetails(dHand)[0]; // Dealer value
         if(hand === -2) {
-          // If player busts, they just lose
           r -= 1;
         } else {
           r += odds * ((value > v) - (value < v));

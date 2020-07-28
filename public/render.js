@@ -57,10 +57,10 @@ function init() {
   fullscreen();
 
   engine = new Engine({
-    count: new Count('hilo', 0, 1),
+    count: new Count('hilo', 1, 1),
     soft17: true,
     spanish: false,
-    surrender: 'early'
+    surrender: 'late'
   }); // USE LET IN PRODUCTION
 
   frame.bind(engine, ctx)();
