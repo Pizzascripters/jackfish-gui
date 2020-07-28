@@ -1,5 +1,4 @@
 .table {
-  margin-left: auto;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -50,7 +49,31 @@
   background-color: #5e5;
 }
 
-.hit, .stand, .doublehit, .doublestand, .split, .unknown, .label {
+.surrenderhit {
+  background-color: #eee;
+  color: #000 !important;
+}
+.surrenderhit:hover {
+  background-color: #ccc;
+}
+
+.surrenderstand {
+  background-color: #eec;
+  color: #000 !important;
+}
+.surrenderstand:hover {
+  background-color: #cca;
+}
+
+.surrendersplit {
+  background-color: #cec;
+  color: #000 !important;
+}
+.surrendersplit:hover {
+  background-color: #aca;
+}
+
+.hit, .stand, .doublehit, .doublestand, .split, .surrenderhit, .surrenderstand, .surrendersplit, .unknown, .label {
   cursor: pointer;
   width: 2.5vh;
   height: 2.5vh;

@@ -53,7 +53,9 @@ function Table() {
       let rows = group.map((hand, j) => {
         return <Row key={window.k++} player={hand} />
       });
-      rows.push(<Divider key={window.k++} />);
+      if(i < PLAYER_HANDS.length - 1) {
+        rows.push(<Divider key={window.k++} />);  
+      }
       return rows;
     })}
   </div>;

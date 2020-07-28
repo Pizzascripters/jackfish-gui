@@ -5,7 +5,8 @@ import Strategy from './scenes/Strategy';
 
 ReactDOM.render(
   <React.StrictMode>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap" rel="stylesheet" />
     <Strategy />
   </React.StrictMode>,
-  document.getElementById('root')
+  document.getElementById('root-container')
 );
