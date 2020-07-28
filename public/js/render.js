@@ -109,7 +109,7 @@ function frame() {
           drawSquare(cell, VALUE_MAP[hand], VALUE_MAP[card]);
         }
       } else {
-        let hand = VALUE_MAP[i - 32] + ','; // Player hand
+        let hand = VALUE_MAP[i - 32] + ',' + VALUE_MAP[i - 32]; // Player hand
         let card = VALUE_MAP[CARD_STATES[j]]; // Dealer card
 
         drawSquare(cell, hand, card);

@@ -1,0 +1,73 @@
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+.table {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+}
+
+.divider {
+  width: 100%;
+  min-height: 20px;
+}
+
+.hit {
+  background-color: #c33;
+}
+.hit:hover {
+  background-color: #e55;
+}
+
+.stand {
+  background-color: #cc3;
+}
+.stand:hover {
+  background-color: #ee5;
+}
+
+.doublehit {
+  background-color: #33c;
+}
+.doublehit:hover {
+  background-color: #55e;
+}
+
+.doublestand {
+  background-color: #3cc;
+}
+.doublestand:hover {
+  background-color: #5ee;
+}
+
+.split {
+  background-color: #3c3;
+}
+.split:hover {
+  background-color: #5e5;
+}
+
+.hit, .stand, .doublehit, .doublestand, .split, .unknown, .label {
+  cursor: pointer;
+  width: 2.5vh;
+  height: 2.5vh;
+  color: #ffffff;
+  font-size: 1vh;
+  font-weight: bold;
+  justify-content: center;
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+}
+
+.smalllabel {
+  font-size: .9vh;
+}
