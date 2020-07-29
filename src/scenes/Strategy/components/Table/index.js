@@ -1,9 +1,10 @@
 import React from 'react';
+import stateToName from '../../../../lib/lib.js';
 import './style.css';
 
 /* Card Constants */
 const CARD_NAMES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
-const CARD_STATES = [43, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const CARD_STATES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 43];
 const PLAYER_HANDS = (() => {
   let hard = [],
       soft = [],
@@ -43,9 +44,18 @@ const ACTION_CLASSES = {
 }
 
 function Box(props) {
+  let active = false;
+  if(props.selection !== null) {
+    active = props.selection[0] === props.player && props.selection[1] === props.dealer;
+  }
   let action = ACTION_MAP[(props.cell[2] ? 'R' : '') + props.cell[0]];
-  let c = ACTION_CLASSES[action];
-  return <div className={`box ${c}`} id={`${props.player}-${props.dealer}`}>{action}</div>
+  let c = ACTION_CLASSES[action] + (active ? ' active' : '');
+  return <div
+    className={`box ${c}`}
+    id={`${props.player}-${props.dealer}`}
+    onClick={props.onSelect}>
+    {action}
+  </div>;
 }
 
 function TableHead() {
@@ -59,9 +69,16 @@ function TableHead() {
 
 function Row(props) {
   return <div className='row'>
-    <div className='label'>{props.player === '10,10' ? 'T,T' : props.player}</div>
+    <div className='label'>{stateToName(props.player)}</div>
     {CARD_STATES.map((card, i) => {
-      return <Box key={i} player={props.player} dealer={card} cell={props.row[(i+1)%10]}/>
+      return <Box
+        key={i}
+        onSelect={props.onSelect.bind(null, props.player, card)}
+        selection={props.selection}
+        player={props.player}
+        dealer={card}
+        cell={props.row[(i+1)%10]}
+      />
     })}
   </div>;
 }
@@ -73,13 +90,17 @@ function Divider(props) {
 class Table extends React.Component  {
   constructor(props) {
     super(props)
-    this.state = {jackfish: null}
+    this.state = {selection: null}
+  }
+
+  onSelect(player, dealer) {
+    this.props.onSelect(player, dealer);
+    this.setState({
+      selection: [player, dealer]
+    });
   }
 
   render() {
-    if(this.props.jackfish === null) return null;
-    const HAND_STATES = this.props.jackfish.getHandStates();
-    let table = this.props.jackfish.getTable();
     return <div className='table'>
       <TableHead />
       {PLAYER_HANDS.map((group, i) => {
@@ -87,11 +108,16 @@ class Table extends React.Component  {
         let rows = group.map((hand, j) => {
           let row;
           if(hand >= 64) {
-            row = table[(CARD_STATES.indexOf(hand - 64) + 1) % 10 + 33];
+            row = this.props.table[(CARD_STATES.indexOf(hand - 64) + 1) % 10 + 33];
           } else {
-            row = table[HAND_STATES.indexOf(hand)];
+            row = this.props.table[this.props.handStates.indexOf(hand)];
           }
-          return <Row key={window.k++} player={hand} row={row} />
+          return <Row
+            key={window.k++}
+            onSelect={this.onSelect.bind(this)}
+            selection={this.state.selection}
+            player={hand} row={row}
+          />
         });
         if(i < PLAYER_HANDS.length - 1) {
           rows.push(<Divider key={window.k++} />);

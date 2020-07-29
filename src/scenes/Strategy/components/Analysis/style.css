@@ -1,3 +1,7 @@
 #analysis {
   padding: 20px;
 }
+
+#analysis > #header {
+  font-size: 1.4vw;
+}
