@@ -33,28 +33,6 @@ const VALUE_MAP = (() => {
   return o;
 })();
 
-// Maps jackfish actions to table actions
-const ACTION_MAP = {
-  'H': 'H',
-  'S': 'S',
-  'D': 'Dh',
-  'd': 'Ds',
-  'P': 'P',
-  'RH': 'Rh',
-  'RS': 'Rs',
-  'RP': 'Rp'
-}
-const ACTION_CLASSES = {
-  'H': 'hit',
-  'S': 'stand',
-  'Dh': 'doublehit',
-  'Ds': 'doublestand',
-  'P': 'split',
-  'Rh': 'surrenderhit',
-  'Rs': 'surrenderstand',
-  'Rp': 'surrendersplit'
-}
-
 /* Graphical constants */
 const TABLE_MARGIN = 50;
 const COLOR_MAP = {
@@ -83,7 +61,7 @@ function init() {
 let activeBox = null;
 function render() {
   function drawSquare(cell, player, dealer) {
-    let action = cell[0]
+    let action = cell[0];
     if(cell[2]) {
       action = 'R' + cell[0];
     }
