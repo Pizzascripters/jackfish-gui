@@ -80,6 +80,7 @@ function init() {
   }))();
 }
 
+let activeBox = null;
 function render() {
   function drawSquare(cell, player, dealer) {
     let action = cell[0]
@@ -88,7 +89,7 @@ function render() {
     }
     action = ACTION_MAP[action];
     let box = document.getElementById(`${player}-${dealer}`);
-    box.className = ACTION_CLASSES[action];
+    box.className = 'box ' + ACTION_CLASSES[action];
     box.innerText = action;
   }
 
@@ -113,5 +114,17 @@ function render() {
     });
   });
 }
+// Select a new box
+window.addEventListener('mousedown', (e) => {
+  if(activeBox) {
+    activeBox.className = activeBox.className.split(' ').slice(0, 2).join(' ');
+  }
+  if(e.target.className.includes('box ')) {
+    activeBox = e.target;
+    activeBox.className += ' active';
+  } else {
+    activeBox = null;
+  }
+});
 
 window.addEventListener('load', init);

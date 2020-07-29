@@ -20,7 +20,7 @@ const PLAYER_HANDS = (() => {
 })();
 
 function Box(props) {
-  return <div className='unknown' id={`${props.player}-${props.dealer}`}></div>
+  return <div className='box unknown' id={`${props.player}-${props.dealer}`}></div>
 }
 
 function TableHead() {
@@ -54,7 +54,7 @@ function Table() {
         return <Row key={window.k++} player={hand} />
       });
       if(i < PLAYER_HANDS.length - 1) {
-        rows.push(<Divider key={window.k++} />);  
+        rows.push(<Divider key={window.k++} />);
       }
       return rows;
     })}

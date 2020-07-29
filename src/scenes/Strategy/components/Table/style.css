@@ -17,35 +17,35 @@
 .hit {
   background-color: #c33;
 }
-.hit:hover {
+.hit:hover, .hit.active {
   background-color: #e55;
 }
 
 .stand {
   background-color: #cc3;
 }
-.stand:hover {
+.stand:hover, .stand.active {
   background-color: #ee5;
 }
 
 .doublehit {
   background-color: #33c;
 }
-.doublehit:hover {
+.doublehit:hover, .doublehit.active {
   background-color: #55e;
 }
 
 .doublestand {
   background-color: #3cc;
 }
-.doublestand:hover {
+.doublestand:hover, .doublestand.active {
   background-color: #5ee;
 }
 
 .split {
   background-color: #3c3;
 }
-.split:hover {
+.split:hover, .split.active {
   background-color: #5e5;
 }
 
@@ -53,7 +53,7 @@
   background-color: #eee;
   color: #000 !important;
 }
-.surrenderhit:hover {
+.surrenderhit:hover, .surrenderhit.active {
   background-color: #ccc;
 }
 
@@ -61,7 +61,7 @@
   background-color: #eec;
   color: #000 !important;
 }
-.surrenderstand:hover {
+.surrenderstand:hover, .surrenderstand.active {
   background-color: #cca;
 }
 
@@ -69,12 +69,11 @@
   background-color: #cec;
   color: #000 !important;
 }
-.surrendersplit:hover {
+.surrendersplit:hover, .surrendersplit.active {
   background-color: #aca;
 }
 
-.hit, .stand, .doublehit, .doublestand, .split, .surrenderhit, .surrenderstand, .surrendersplit, .unknown, .label {
-  cursor: pointer;
+.box, .label {
   width: 2.5vh;
   height: 2.5vh;
   color: #ffffff;
@@ -84,6 +83,9 @@
   display: flex;
   flex-flow: row wrap;
   align-items: center;
+}
+.box {
+  cursor: pointer;
 }
 
 .smalllabel {

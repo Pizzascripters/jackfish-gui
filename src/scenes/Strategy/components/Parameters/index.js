@@ -56,6 +56,7 @@ function Parameters() {
       } else if(param.type === 'Switch') {
         return <Switch key={i} label={param.label} enabled={param.value} onChange={param.onChange}/>
       }
+      return null;
     })}
   </div>;
 }
