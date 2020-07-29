@@ -1,0 +1,30 @@
+.switch {
+  margin-bottom: 20px;
+}
+
+.switch > .switchBg {
+  cursor: pointer;
+  position: absolute;
+  width: 50px;
+  height: 20px;
+  border-radius: 10px;
+  background-color: #c33;
+  transition: background-color .2s;
+}
+.switch > .switchBg.active {
+  background-color: #3c3;
+}
+
+.switch > .switchSlider {
+  cursor: pointer;
+  position: absolute;
+  left: 18px;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background-color: #333;
+  transition: left .2s;
+}
+.switch > .switchSlider.active {
+  left: 52px;
+}

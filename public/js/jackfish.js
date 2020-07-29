@@ -106,7 +106,8 @@ function Jackfish(params) {
     let split = -Infinity;
     if(pair) {
       let post = state === 44 ? 43 : state / 2; // State after splitting
-      split = splitReturns(HAND_STATES.indexOf(post), transpose(rdM)[j], odds);
+      let r = params.doubleAfterSplit ? rdM : rM;
+      split = splitReturns(HAND_STATES.indexOf(post), transpose(r)[j], odds);
     }
 
     // Decide whether to surrender if possible

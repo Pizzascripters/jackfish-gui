@@ -75,8 +75,8 @@ function init() {
   render.bind(jackfish = new Jackfish({
     count: new Count('hilo', 0, 1),
     soft17: true,
-    spanish: false,
-    surrender: 'none'
+    surrender: 'none',
+    doubleAfterSplit: true
   }))();
 }
 
