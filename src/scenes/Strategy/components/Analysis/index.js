@@ -22,7 +22,7 @@ function Analysis(props) {
     <Header selection={props.selection}/>
     <BestMove jackfish={props.jackfish} selection={props.selection} />
     <Dealer jackfish={props.jackfish} selection={props.selection} />
-    <Actions jackfish={props.jackfish} selection={props.selection} />
+    <Actions jackfish={props.jackfish} selection={props.selection} surrender={props.jackfish.getParams().surrender} />
   </div>;
 }
 
@@ -48,7 +48,7 @@ function BestMove(props) {
       player *= 2;
     }
     let move = jackfish.bestMove(player, dealer, pair);
-    let action = (move[2] ? 'R' : '') + move[0]
+    let action = (move[2] ? 'R' : '') + move[0];
     return <div className='bestmove'>{ACTION_NAMES[action]}</div>;
   }
   return null;
@@ -100,11 +100,21 @@ function Actions(props) {
         jackfish.getDouble(value, dealer)
       ];
     }
-    let labels = [actionNames['H'], actionNames['S'], actionNames['DD'], actionNames['P']];
+    if(props.surrender === 'late') {
+      ret[4] = -.5;
+    } else if(props.surrender === 'early') {
+      let b = jackfish.getBJOdds(dealer);
+      ret[4] = (b - .5) / (1 - b);
+    }
+    let labels = [actionNames['H'], actionNames['S'], actionNames['DD'], actionNames['P'], actionNames['R']];
     return <div className='actionInfo'>
       <div>Actions:</div>
       {ret.map((p, i) => {
-        return <div key={i}>{labels[i]}: {formatPercent(p, true)}</div>
+        if(p) {
+          return <div key={i}>{labels[i]}: {formatPercent(p, true)}</div>
+        } else {
+          return null;
+        }
       })}
     </div>
   }

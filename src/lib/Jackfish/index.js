@@ -156,17 +156,13 @@ function Jackfish(params) {
       let state = mpower(hitMatrix(odds), 2)[HAND_STATES.indexOf(0)];
       state[HAND_STATES.indexOf(-1)] = state[HAND_STATES.indexOf(21)]; // 21 after 2 cards is blackjack
       state[HAND_STATES.indexOf(21)] = 0;
-      let bjOdds = 0;
-      if(CARD_STATES[j] === 1) {
-        bjOdds = odds[CARD_STATES.indexOf(10)];
-      } else if(CARD_STATES[j] === 10) {
-        bjOdds = odds[CARD_STATES.indexOf(1)];
-      }
+      let bjOdds = this.getBJOdds(CARD_STATES[j]);
       let r = dot(state, transpose(rdM)[j]);
       return r * (1 - bjOdds) - bjOdds;
     }
   }
 
+  this.getParams = () => params;
   this.getHandStates = () => HAND_STATES;
   this.getDealerStates = () => DEALER_STATES;
   this.getReturnNoDouble = () => rM;
@@ -187,6 +183,15 @@ function Jackfish(params) {
   }
   this.getEnd = (dealer, end) => {
     return iSSMatrix(endM, dealer, end);
+  }
+  this.getBJOdds = (dealer) => {
+    let bjOdds = 0;
+    if(dealer === 43) {
+      bjOdds = odds[CARD_STATES.indexOf(10)];
+    } else if(dealer === 10) {
+      bjOdds = odds[CARD_STATES.indexOf(1)];
+    }
+    return bjOdds;
   }
 }
 
