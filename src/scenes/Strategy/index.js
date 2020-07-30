@@ -43,6 +43,7 @@ class Strategy extends React.Component {
         table={this.state.table}
       />
       <Analysis
+        jackfish={this.state.jackfish}
         selection={this.state.selection}
       />
     </div>

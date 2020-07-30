@@ -3,5 +3,69 @@
 }
 
 #analysis > #header {
+  font-size: 2.0vw;
+}
+
+#analysis > .bestmove {
   font-size: 1.4vw;
+  margin-bottom: 20px;
+}
+
+#analysis > .dealerInfo {
+  margin-bottom: 20px;
+}
+
+#analysis > .dealerInfo > div:first-child,
+#analysis > .actionInfo > div:first-child {
+  font-size: 1.4vw;
+}
+
+#analysis > .dealerInfo > div:not(first-child),
+#analysis > .actionInfo > div:not(first-child) {
+  font-size: 1vw;
+}
+
+.deepred {
+  font-weight: bold;
+  color: #a22;
+}
+
+.red {
+  font-weight: bold;
+  color: #f33;
+}
+
+.lightred {
+  font-weight: bold;
+  color: #f66;
+}
+
+.yellow {
+  font-weight: bold;
+  color: #ff3;
+}
+
+.blue {
+  font-weight: bold;
+  color: #3af;
+}
+
+.deepgreen {
+  font-weight: bold;
+  color: #3a3;
+}
+
+.green {
+  font-weight: bold;
+  color: #6f6;
+}
+
+.lightgreen {
+  font-weight: bold;
+  color: #9f9;
+}
+
+.white {
+  font-weight: bold;
+  color: #ddd;
 }

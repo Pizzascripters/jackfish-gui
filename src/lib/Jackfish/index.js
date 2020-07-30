@@ -31,6 +31,7 @@ function Jackfish(params) {
   let rM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return without doubling
   let rdM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with doubling
   let hitM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
+  let splitM = zeroes([DEALER_STATES.length, DEALER_STATES.length]);
 
   // Calculate dealer's odds to reach each endstate
   // Raising to 12th power because that's the maximum number of times the dealer can hit
@@ -108,6 +109,7 @@ function Jackfish(params) {
       let post = state === 44 ? 43 : state / 2; // State after splitting
       let r = params.doubleAfterSplit ? rdM : rM;
       split = splitReturns(HAND_STATES.indexOf(post), transpose(r)[j], odds);
+      iDealer(splitM, post)[j] = split;
     }
 
     // Decide whether to surrender if possible
@@ -136,6 +138,7 @@ function Jackfish(params) {
     }
   }
   this.bestMove = (player, dealer, split) => {
+    if(dealer === 10) dealer = -3;
     let i = HAND_STATES.indexOf(player);
     let j = DEALER_STATES.indexOf(dealer);
     return bestMove(i, j, split);
@@ -165,13 +168,26 @@ function Jackfish(params) {
   }
 
   this.getHandStates = () => HAND_STATES;
-  this.getDouble = () => doubleM;
-  this.getHit = () => hitM;
+  this.getDealerStates = () => DEALER_STATES;
   this.getReturnNoDouble = () => rM;
   this.getReturn = () => rdM;
-  this.getStand = () => standM;
   this.getCount = () => params.count;
   this.getOdds = () => odds;
+  this.getHit = (player, dealer) => {
+    return iSDMatrix(hitM, player, dealer);
+  }
+  this.getStand = (player, dealer) => {
+    return iSDMatrix(standM, player, dealer);
+  }
+  this.getDouble = (player, dealer) => {
+    return iSDMatrix(doubleM, player, dealer);
+  }
+  this.getSplit = (player, dealer) => {
+    return iDDMatrix(splitM, player, dealer);
+  }
+  this.getEnd = (dealer, end) => {
+    return iSSMatrix(endM, dealer, end);
+  }
 }
 
 // Odds that we draw each card
@@ -318,7 +334,7 @@ function standReturns(endMatrix) {
         let dHand = HAND_STATES[k];
         let v = getHandDetails(dHand)[0]; // Dealer value
         if(hand === -2) {
-          r -= 1;
+          r -= odds;
         } else {
           r += odds * ((value > v) - (value < v));
         }
@@ -364,6 +380,33 @@ function getHandDetails(hand) {
     value = 10;
   }
   return [value, soft];
+}
+
+// Index state,state matrix: m[state][state]
+function iSSMatrix(m, i, j) {
+  return m[HAND_STATES.indexOf(i)][HAND_STATES.indexOf(j)];
+}
+
+// Index state,dealer matrix: m[state][dealer]
+function iSDMatrix(m, i, j) {
+  if(j === 10) j = -3;
+  return m[HAND_STATES.indexOf(i)][DEALER_STATES.indexOf(j)];
+}
+
+// Index dealer,dealer matrix: m[dealer][dealer]
+function iDDMatrix(m, i, j) {
+  return iDealer(iDealer(m, i), j);
+}
+
+// Index state array: v[state]
+function iState(v, i) {
+  return v[HAND_STATES.indexOf(i)];
+}
+
+// Index dealer array: v[dealer]
+function iDealer(v, i) {
+  if(i === 10) i = -3;
+  return v[DEALER_STATES.indexOf(i)];
 }
 
 /* Logic functions */

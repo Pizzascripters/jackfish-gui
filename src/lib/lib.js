@@ -1,3 +1,5 @@
+import React from 'react';
+
 function stateToName(state, long) {
   let v = String(state & 0x1f);
   let soft = state & 0x20;
@@ -31,4 +33,23 @@ function stateToName(state, long) {
   }
 }
 
-export default stateToName;
+function formatPercent(a, b) {
+  if(b && a > .5) {
+    return <span className='deepgreen'>+{formatPercent(a)}</span>;
+  } else if(b && a > .1) {
+    return <span className='green'>+{formatPercent(a)}</span>;
+  } else if(b && a > 0) {
+    return <span className='lightgreen'>+{formatPercent(a)}</span>;
+  } else if(b && a < -.5) {
+    return <span className='deepred'>{formatPercent(a)}</span>;
+  } else if(b && a < -.1) {
+    return <span className='red'>{formatPercent(a)}</span>;
+  } else if(b && a < 0) {
+    return <span className='lightred'>{formatPercent(a)}</span>;
+  } else {
+    return (100*a).toPrecision(3) + '%';
+  }
+}
+
+export { stateToName };
+export { formatPercent };

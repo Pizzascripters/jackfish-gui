@@ -1,5 +1,5 @@
 import React from 'react';
-import stateToName from '../../../../lib/lib.js';
+import {stateToName} from '../../../../lib/lib.js';
 import './style.css';
 
 /* Card Constants */
