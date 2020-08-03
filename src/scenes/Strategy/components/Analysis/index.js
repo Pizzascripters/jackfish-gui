@@ -42,11 +42,6 @@ function BestMove(props) {
     let player = props.selection[0] & 0x3f;
     let dealer = props.selection[1];
     let pair = props.selection[0] & 0x40;
-    if(pair && player === 43) {
-      player = 44;
-    } else if(pair) {
-      player *= 2;
-    }
     let move = jackfish.bestMove(player, dealer, pair);
     let action = (move[2] ? 'R' : '') + move[0];
     return <div className='bestmove'>{ACTION_NAMES[action]}</div>;

@@ -77,7 +77,7 @@ function Row(props) {
         selection={props.selection}
         player={props.player}
         dealer={card}
-        cell={props.row[(i+1)%10]}
+        cell={props.jackfish.getTable(props.player, card)}
       />
     })}
   </div>;
@@ -106,17 +106,12 @@ class Table extends React.Component  {
       {PLAYER_HANDS.map((group, i) => {
         if(!window.k) window.k = 0; // Iterator for keys
         let rows = group.map((hand, j) => {
-          let row;
-          if(hand >= 64) {
-            row = this.props.table[(CARD_STATES.indexOf(hand - 64) + 1) % 10 + 33];
-          } else {
-            row = this.props.table[this.props.handStates.indexOf(hand)];
-          }
           return <Row
             key={window.k++}
+            jackfish={this.props.jackfish}
             onSelect={this.onSelect.bind(this)}
             selection={this.state.selection}
-            player={hand} row={row}
+            player={hand}
           />
         });
         if(i < PLAYER_HANDS.length - 1) {

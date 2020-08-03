@@ -44,7 +44,7 @@ function getParam(label) {
 
 function update(f) {
   f({
-    count: new Count('none', 0, 1),
+    count: new Count('none'),
     soft17: getParam('Soft 17').value === 'Hits',
     surrender: getParam('Surrender').value.toLocaleLowerCase(),
     doubleAfterSplit: getParam('Double After Split').value

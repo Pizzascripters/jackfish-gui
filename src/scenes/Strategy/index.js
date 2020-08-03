@@ -10,7 +10,7 @@ class Strategy extends React.Component {
   constructor(props) {
     super(props);
     let jackfish = new Jackfish({
-      count: new Count('none', 0, 1),
+      count: new Count('none'),
       soft17: true,
       surrender: 'none',
       doubleAfterSplit: true
@@ -20,9 +20,9 @@ class Strategy extends React.Component {
   }
 
   updateEngine(params) {
-    let jackfish = new Jackfish(params);
-    let table = jackfish.getTable();
-    this.setState({ jackfish, table });
+    let jackfish = this.state.jackfish;
+    jackfish.setParams(params);
+    this.setState({ jackfish });
   }
 
   onSelect(player, dealer) {
@@ -38,9 +38,8 @@ class Strategy extends React.Component {
         updateEngine={this.updateEngine.bind(this)}
       />
       <Table
+        jackfish={this.state.jackfish}
         onSelect={this.onSelect.bind(this)}
-        handStates={this.state.jackfish.getHandStates()}
-        table={this.state.table}
       />
       <Analysis
         jackfish={this.state.jackfish}
