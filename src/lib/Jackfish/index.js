@@ -56,7 +56,7 @@ function Jackfish(params) {
   this.getReturnNoDouble = () => rM;
   this.getTable = getTable;
   this.getEnd = (dealer, end) => {
-    return iSSMatrix(endM, dealer, end);
+    return iDSMatrix(endM, dealer, end);
   }
   this.getHit = (player, dealer) => {
     return iSDMatrix(hitM, player, dealer);
@@ -122,8 +122,7 @@ function Jackfish(params) {
     odds = drawOdds(params.count);
 
     // Calculate dealer's odds to reach each endstate
-    // Raising to 12th power because that's the maximum number of times the dealer can hit
-    endM = mpower(dealerMatrix(odds, params.soft17), 12);
+    endM = endMatrix(odds, params.soft17, params.count.decks * 52);
 
     // Calculate player's return by standing
     standM = standReturns(endM);
@@ -360,6 +359,95 @@ function Jackfish(params) {
     return a;
   }
 
+  function endMatrix(odds, soft17, cards) {
+    let P = progressionMatrix();
+    let states = [];
+    let a = [];
+
+    DEALER_STATES.forEach((dealer, c) => {
+      // Initialize the state matrix
+      states[c] = zeroes([HAND_STATES.length, CARD_STATES.length]);
+      let state = states[c];
+      state[HAND_STATES.indexOf(dealer)] = odds;
+
+      // Peeked cards have weighted odds
+      let weight = 1;
+      if(dealer === -3) {
+        weight = 1 / (1 - odds[DEALER_STATES.indexOf(-4)]); // One ten. Dealer can't have an ace.
+      } else if(dealer === -4) {
+        weight = 1 / (1 - odds[DEALER_STATES.indexOf(-3)]); // One ace. Dealer can't have a 10.
+      }
+
+      // 12 is the maximum size for a blackjack hand
+      for(let t = 0; t < 12; t++) {
+        let newState = zeroes([HAND_STATES.length, CARD_STATES.length]);
+        HAND_STATES.forEach((hand, I) => {
+          HAND_STATES.forEach((hand_, i) => {
+            let [value, soft] = getHandDetails(hand_);
+            let endState = ((value >= 17 && !(value === 17 && soft && soft17)) || hand_ === -2);
+            CARD_STATES.forEach((card, j) => {
+              // Skip Blackjack
+              if((hand_ === -3 && card === 43) || (hand_ === -4 && card === 10)) {
+                return;
+              }
+
+              // If (card j) causes (state i) to transition to (state I)
+              if((endState && i === I) || (!endState && P[i][j] === HAND_STATES[I])) {
+                // Make sure (state i) is reachable from (dealer card c)
+                let total = vtotal(state[i]);
+                if(total > 0) {
+                  // Shift the odds as if we pulled (card j)
+                  let newOdds = pullCard(state[i], j, cards - t);
+                  // Weight the new odds if necessary
+                  if(weight && (hand_ === -3 || hand_ === -4)) {
+                    newOdds = vscale(newOdds, weight);
+                  }
+                  // Add that deck distribution to (state I)
+                  newState[I] = vsum(newState[I], vscale(newOdds, state[i][j] / total));
+                }
+              }
+            });
+          });
+        });
+        state = states[c] = newState;
+      }
+    });
+
+    DEALER_STATES.forEach((dealer, c) => {
+      a[c] = squishState(states[c]);
+    });
+
+    // 2d matrtix -> 1d vector
+    function squishState(state) {
+      let v = [];
+      HAND_STATES.forEach((hand, i) => {
+        v[i] = 0;
+        CARD_STATES.forEach((card, j) => {
+          v[i] += state[i][j];
+        });
+      });
+      return v;
+    }
+
+    // Shift the deck distribution after pulling one card
+    function pullCard(state, c, cards) {
+      if(state[c] === 0) return zeroes([state.length]);
+      let total = vtotal(state);
+      state = vscale(state, 1/total); // Normalize the vector
+      let newState = [];
+      CARD_STATES.forEach((card, j) => {
+        if(j === c) {
+          newState[j] = (cards * state[j] - 1) / (cards - 1);
+        } else {
+          newState[j] = (cards * state[j]) / (cards - 1);
+        }
+      });
+      return vscale(newState, total);
+    }
+
+    return a;
+  }
+
   // Calculate player's return by standing
   function standReturns(endMatrix) {
     let a = [];
@@ -368,8 +456,7 @@ function Jackfish(params) {
       a.push([]);
       let value = getHandDetails(hand)[0]; // Player value
       DEALER_STATES.forEach((dealer, j) => {
-        let idx = HAND_STATES.indexOf(dealer);
-        let endOdds = endMatrix[idx];
+        let endOdds = endMatrix[j];
         let r = 0; // Return on bet
 
         endOdds.forEach((odds, k) => {
@@ -445,6 +532,13 @@ function Jackfish(params) {
     return m[HAND_STATES.indexOf(i)][DEALER_STATES.indexOf(j)];
   }
 
+  // Index dealer,state matrix: m[dealer][state]
+  function iDSMatrix(m, i, j) {
+    if(i === 10) i = -3;
+    if(i === 43) i = -4;
+    return m[DEALER_STATES.indexOf(i)][HAND_STATES.indexOf(j)];
+  }
+
   // Index dealer,dealer matrix: m[dealer][dealer]
   function iDDMatrix(m, i, j) {
     return iDealer(iDealer(m, i), j);
@@ -503,7 +597,19 @@ function Jackfish(params) {
     }
   }
 
-  /* Mathy Unility Functions */
+  /*-- Mathy Unility Functions --*/
+
+  function vtotal(u) {
+    return u.reduce((r, x, i) => r + x, 0);
+  }
+
+  function vsum(u, v) {
+    return u.map((x, i) => x + v[i]);
+  }
+
+  function vscale(u, c) {
+    return u.map((x, i) => x * c);
+  }
 
   function dot(u, v) {
     return u.reduce((r, x, i) => r + x * v[i], 0);
