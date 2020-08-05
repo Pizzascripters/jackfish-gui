@@ -10,7 +10,7 @@ class Strategy extends React.Component {
   constructor(props) {
     super(props);
     let jackfish = new Jackfish({
-      count: new Count('hilo', 0, 1),
+      count: new Count('hilo', 0, 4),
       soft17: true,
       surrender: 'none',
       doubleAfterSplit: true
