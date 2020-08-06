@@ -37,7 +37,7 @@ function Jackfish(params) {
   // The player hands recorded by the table
   const TABLE_HANDS = (() => {
     let a = [];
-    loop(5, 21, v => a.push(createHand(v, false))); // Hard hands
+    loop(5, 22, v => a.push(createHand(v, false))); // Hard hands
     loop(12, 21, v => a.push(createHand(v, true))); // Soft hands
     loop(2, 11, v => a.push(createHand(v, false, true))); // Pairs
     a.push(createHand(43, false, true));
@@ -55,6 +55,7 @@ function Jackfish(params) {
   this.getReturn = () => rdM;
   this.getReturnNoDouble = () => rM;
   this.getTable = getTable;
+  this.createSimulation = createSimulation;
   this.getEnd = (dealer, end) => {
     return iDSMatrix(endM, dealer, end);
   }
@@ -231,6 +232,180 @@ function Jackfish(params) {
     }
   }
 
+  /*-- Monte Carlo Simulation --*/
+  function createSimulation(player, dealer, forceMove) {
+    let p = elemsToIndices(player);
+    let cards = Math.round(52 * params.count.decks);
+    let comp = [];
+
+    return {
+      config: (p_, d) => {
+        p = elemsToIndices(p_);
+        dealer = d;
+      },
+      run: (n) => {
+        let r = 0;
+        let playerAndDealer = false;
+        if(player && dealer) {
+          playerAndDealer = true;
+        } else if(player && !dealer) {
+          dealer = player;
+        }
+        for(let i = 0; i < n; i++) {
+          for(let j = 0; j < odds.length; j++) {
+            comp[j] = odds[j];
+          }
+          if(forceMove) {
+            r += playHand(
+              comp,
+              cards,
+              DEALER_STATES.indexOf(dealer),
+              p,
+              false,
+              forceMove
+            ) / n;
+          } else if(playerAndDealer) {
+            r += playHand(
+              comp,
+              cards,
+              DEALER_STATES.indexOf(dealer),
+              p
+            ) / n;
+          } else if(dealer) {
+            r += playHand(
+              comp,
+              cards,
+              DEALER_STATES.indexOf(dealer),
+            ) / n;
+          } else {
+            r += playHand(
+              comp,
+              cards,
+            ) / n;
+          }
+        }
+        console.log(100 * r);
+      }
+    }
+
+    function elemsToIndices(p) {
+      if(!p) return p;
+      let a = [];
+      for(let i = 0; i < p.length; i++) {
+        a[i] = CARD_STATES.indexOf(p[i]);
+      }
+      return a;
+    }
+  }
+
+  // fixDealer prevents the dealer from hitting
+  function playHand(comp, cards, c, p, fixDealer, forceMove) {
+    let dealer;
+    cards = {cards};
+    let P = progressionMatrix();
+    if(c === undefined) {
+      c = drawCard(comp, cards);
+    }
+    dealer = DEALER_STATES[c];
+    let p1, p2, player;
+    if(!p) {
+      p1 = drawCard(comp, cards);
+      p2 = drawCard(comp, cards);
+    } else {
+      p1 = p[0];
+      p2 = p[1];
+    }
+    player = P[HAND_STATES.indexOf(P[HAND_STATES.indexOf(0)][p1])][p2];
+    let pair = p1 === p2;
+    let state;
+    let half;
+    if((CARD_STATES[p1] === 10 && CARD_STATES[p2] === 43) || (CARD_STATES[p2] === 10 && CARD_STATES[p1] === 43)) {
+      state = -1;
+    } else if(pair && player === 44) {
+      half = 11;
+      state = createHand(half, true, true);
+    } else if(pair) {
+      half = player / 2;
+      state = createHand(half, false, true);
+    } else {
+      state = player;
+    }
+    let double = false;
+    if(state !== -1) {
+      let action;
+      if(forceMove) {
+        action = forceMove;
+      } else {
+        action = getTable(state, dealer)[0];
+      }
+      if(action === 'P') {
+        dealer = simDealer(P, comp, cards, dealer);
+        let r1 = playHand(comp, cards.cards, c, [p1, drawCard(comp, cards)], dealer);
+        if(r1 === 1.5) r1 = 1;
+        let r2 = playHand(comp, cards.cards, c, [p2, drawCard(comp, cards)], dealer);
+        if(r2 === 1.5) r2 = 1;
+        return r1 + r2;
+      } else if(action === 'D' || action === 'd') {
+        double = true;
+        player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
+      } else {
+        while(action === 'H') {
+          player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
+          if(player !== -2) {
+            action = getTable(player, dealer)[0];
+          } else {
+            break;
+          }
+        }
+      }
+    }
+
+    if(player === -2 && double) {
+      return -2;
+    } else if(player === -2) {
+      return -1;
+    } else if(fixDealer) {
+      dealer = fixDealer;
+    } else {
+      dealer = simDealer(P, comp, cards, dealer);
+    }
+
+    if(state === -1 && dealer === -1) {
+      return -1; // Player and dealer blackjack
+    } else if(state === -1) {
+      return 1.5; // Player blackjack
+    }
+
+    let pv = getHandDetails(player)[0]; // Player value
+    let dv = getHandDetails(dealer)[0]; // Dealer value
+    if(pv > dv) {
+      return double ? 2 : 1;
+    } else if(pv === dv) {
+      return 0;
+    } else {
+      return double && dv !== 22 ? -2 : -1;
+    }
+  }
+
+  function drawCard(comp, cards) {
+    let c = pickFromArray(comp);
+    let newComp = pullCard(comp, c, cards.cards);
+    for(let i = 0; i < comp.length; i++) {
+      comp[i] = newComp[i];
+    }
+    cards.cards--;
+    return c;
+  }
+
+  // Run dealer until it hits an endstate or bust
+  function simDealer(P, comp, cards, dealer) {
+    while((dealer & 0x1f) < 17 || dealer === -3 || dealer === -4 || (params.soft17 && dealer === 49)) {
+      let nextCard = drawCard(comp, cards);
+      dealer = P[HAND_STATES.indexOf(dealer)][nextCard];
+    }
+    return dealer;
+  }
+
   /*-- High Level Functions --*/
 
   // Odds that we draw each card
@@ -393,22 +568,6 @@ function Jackfish(params) {
       return v;
     }
 
-    // Shift the deck distribution after pulling one card
-    function pullCard(state, c, cards) {
-      if(state[c] === 0) return zeroes([state.length]);
-      let total = vtotal(state);
-      state = vscale(state, 1/total); // Normalize the vector
-      let newState = [];
-      CARD_STATES.forEach((card, j) => {
-        if(j === c) {
-          newState[j] = (cards * state[j] - 1) / (cards - 1);
-        } else {
-          newState[j] = (cards * state[j]) / (cards - 1);
-        }
-      });
-      return vscale(newState, total);
-    }
-
     return a;
   }
 
@@ -459,6 +618,22 @@ function Jackfish(params) {
     return a;
   }
 
+  // Shift the deck distribution after pulling one card
+  function pullCard(state, c, cards) {
+    if(state[c] === 0) return zeroes([state.length]);
+    let total = vtotal(state);
+    state = vscale(state, 1/total); // Normalize the vector
+    let newState = [];
+    CARD_STATES.forEach((card, j) => {
+      if(j === c) {
+        newState[j] = (cards * state[j] - 1) / (cards - 1);
+      } else {
+        newState[j] = (cards * state[j]) / (cards - 1);
+      }
+    });
+    return vscale(newState, total);
+  }
+
   function createHand(value, soft, pair) {
     if(pair) value += 0x40;
     if(soft) value += 0x20;
@@ -466,13 +641,17 @@ function Jackfish(params) {
   }
 
   function getHandDetails(hand) {
-    let value = -1,
+    let value = 0,
         soft = false,
         pair = false;
     if(hand >= 0) {
       value = hand & 0x1f;
       soft = hand & 0x20;
       pair = hand & 0x40;
+    } else if(hand === -1) {
+      value = 22;
+    } else if(hand === -2) {
+      value = -999;
     } else if(hand === -3) {
       value = 10;
     } else if(hand === -4) {
@@ -614,6 +793,20 @@ function Jackfish(params) {
     loop(1, n, () => p = mmultiply(p, a));
     return p;
   }
+
+  // Picks random index from weighted probability array
+  function pickFromArray(a) {
+    let x = Math.random(),
+        i = 0;
+    while(x > 0) {
+      x -= a[i++];
+    }
+    return i - 1;
+  }
+
+  // function checkNaN(x) {
+  //   return (x !== x) === true;
+  // }
 }
 
 export default Jackfish;

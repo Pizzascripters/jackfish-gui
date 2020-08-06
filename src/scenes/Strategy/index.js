@@ -10,13 +10,16 @@ class Strategy extends React.Component {
   constructor(props) {
     super(props);
     let jackfish = new Jackfish({
-      count: new Count('hilo', 0, 4),
+      count: new Count('hilo', 0, 1),
       soft17: true,
       surrender: 'none',
       doubleAfterSplit: true
     });
     let table = jackfish.getTable();
     this.state = { jackfish, table, selection: null };
+
+    let sim = jackfish.createSimulation([5, 6], -4, 'D');
+    sim.run(10000);
   }
 
   updateEngine(params) {
