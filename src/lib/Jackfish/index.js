@@ -7,11 +7,18 @@ function Jackfish(params) {
 
   /*-- Hand and card constants --*/
 
-  // A list of all cards (ace is 43)
+  // Like an enum, but we can't, because it's JavaScript
+  const BLACKJACK = -1;
+  const BUST = -2;
+  const DEALER_TEN = -3;
+  const DEALER_ACE = -4;
+  const ACE = 43;
+
+  // A list of all cards
   const CARD_STATES = (() => {
     let i = 2;
     let a = fillArray(() => i++, 9);
-    a.push(43);
+    a.push(ACE);
     return a;
   })();
   // A list of possible hands the player or the dealer can have
@@ -19,19 +26,19 @@ function Jackfish(params) {
     let a = [];
     loop(2, 22, v => a.push(createHand(v, false))); // Hard hands
     loop(11, 21, v => a.push(createHand(v, true))); // Soft hands
-    a.push(0, -1, -2, -3, -4); // No cards, blackjack, bust, peeked 10, and peeked Ace respectively
+    a.push(0, BLACKJACK, BUST, DEALER_TEN, DEALER_ACE);
     return a;
   })();
   // The order we should determine the best moves
   const HAND_ORDER = (() => {
     let a = [];
-    a.push(-2, -1);
+    a.push(BUST, BLACKJACK);
     rLoop(21, 11, v => a.push(createHand(v))); // Hard hands 12+
     rLoop(20, 10, v => a.push(createHand(v, true))); // Soft hands
     rLoop(11, 1, v => a.push(createHand(v))); // Hard hands <12
     a.push(0);
     loop(2, 11, v => a.push(createHand(v, false, true))); // Pairs
-    a.push(createHand(43, false, true));
+    a.push(createHand(ACE, false, true));
     return a;
   })();
   // The player hands recorded by the table
@@ -40,17 +47,17 @@ function Jackfish(params) {
     loop(5, 22, v => a.push(createHand(v, false))); // Hard hands
     loop(12, 21, v => a.push(createHand(v, true))); // Soft hands
     loop(2, 11, v => a.push(createHand(v, false, true))); // Pairs
-    a.push(createHand(43, false, true));
+    a.push(createHand(ACE, false, true));
     return a;
   })();
   // All possible hands the dealer can start with
-  const DEALER_STATES = HAND_STATES.filter(hand => (hand > 0 && hand < 10) || hand === -3 || hand === -4);
+  const DEALER_STATES = HAND_STATES.filter(hand => (hand > 0 && hand < 10) || hand === DEALER_TEN || hand === DEALER_ACE);
 
   /*-- Public Functions --*/
 
   // Positive number indicates player has an edge
   this.getCount = () => params.count;
-  this.getOdds = () => odds;
+  this.getComp = () => comp;
   this.getParams = () => params;
   this.getReturn = () => rdM;
   this.getReturnNoDouble = () => rM;
@@ -73,10 +80,10 @@ function Jackfish(params) {
   }
   this.getBJOdds = (dealer) => {
     let bjOdds = 0;
-    if(dealer === 43) {
-      bjOdds = odds[DEALER_STATES.indexOf(-3)];
+    if(dealer === ACE) {
+      bjOdds = comp[DEALER_STATES.indexOf(DEALER_TEN)];
     } else if(dealer === 10) {
-      bjOdds = odds[DEALER_STATES.indexOf(-4)];
+      bjOdds = comp[DEALER_STATES.indexOf(DEALER_ACE)];
     }
     return bjOdds;
   }
@@ -84,12 +91,12 @@ function Jackfish(params) {
     if(j === undefined) {
       let edge = 0;
       loop(0, CARD_STATES.length, i => {
-        edge += odds[i] * this.getEdge(i);
+        edge += comp[i] * this.getEdge(i);
       });
       return 100 * edge;
     } else {
-      let state = mpower(hitMatrix(odds), 2)[HAND_STATES.indexOf(0)];
-      state[HAND_STATES.indexOf(-1)] = state[HAND_STATES.indexOf(21)]; // 21 after 2 cards is blackjack
+      let state = mpower(hitMatrix(comp), 2)[HAND_STATES.indexOf(0)];
+      state[HAND_STATES.indexOf(BLACKJACK)] = state[HAND_STATES.indexOf(21)]; // 21 after 2 cards is blackjack
       state[HAND_STATES.indexOf(21)] = 0;
       let bjOdds = this.getBJOdds(CARD_STATES[j]);
       let r = dot(state, transpose(rdM)[j]);
@@ -102,13 +109,13 @@ function Jackfish(params) {
     table = undefined; // Clear table
   }
   this.bestMove = (player, dealer, split) => {
-    if(dealer === 10) dealer = -3;
-    if(dealer === 43) dealer = -4;
+    if(dealer === 10) dealer = DEALER_TEN;
+    if(dealer === ACE) dealer = DEALER_ACE;
     return bestMove(player, dealer, split);
   };
 
   /*-- Private Variables --*/
-  let odds;
+  let comp;
   let endM, standM, doubleM;
   let table;
 
@@ -120,10 +127,10 @@ function Jackfish(params) {
 
   /*-- Determine Matrices --*/
   function determineMatrices() {
-    odds = drawOdds(params.count);
+    comp = deckComp(params.count);
 
     // Calculate dealer's odds to reach each endstate
-    endM = endMatrix(odds, params.soft17, params.count.decks * 52);
+    endM = endMatrix(comp, params.soft17, params.count.decks * 52);
 
     // Calculate player's return by standing
     standM = standReturns(endM);
@@ -131,14 +138,14 @@ function Jackfish(params) {
     loop(0, DEALER_STATES.length, i => {
       let j = HAND_STATES.indexOf(21);
       rdM[j][i] = rM[j][i] = standM[j][i];
-      j = HAND_STATES.indexOf(-2);
+      j = HAND_STATES.indexOf(BUST);
       rdM[j][i] = rM[j][i] = -1;
-      j = HAND_STATES.indexOf(-1);
+      j = HAND_STATES.indexOf(BLACKJACK);
       rdM[j][i] = rM[j][i] = 1.5;
     });
 
     // Calculate player's return by doubling
-    doubleM = doubleReturns(standM, odds);
+    doubleM = doubleReturns(standM, comp);
   }
   if(params) {
     determineMatrices();
@@ -148,8 +155,8 @@ function Jackfish(params) {
   function getTable(player, dealer) {
     function exit() {
       if(player && dealer) {
-        if(dealer === 'A' || dealer === 43) dealer = -4;
-        if(dealer === 10) dealer = -3;
+        if(dealer === 'A' || dealer === ACE) dealer = DEALER_ACE;
+        if(dealer === 10) dealer = DEALER_TEN;
         return table[TABLE_HANDS.indexOf(player)][DEALER_STATES.indexOf(dealer)];
       } else {
         return table;
@@ -193,9 +200,9 @@ function Jackfish(params) {
     let split = -Infinity;
     if(pair) {
       let r = params.doubleAfterSplit ? rdM : rM;
-      split = splitReturns(findHand(state), transpose(r)[j], odds);
+      split = splitReturns(findHand(state), transpose(r)[j], comp);
       iDealer(splitM, state)[j] = split;
-      state = state === 43 ? 44 : state * 2; // State before split
+      state = state === ACE ? 44 : state * 2; // State before split
     }
 
     let i = HAND_STATES.indexOf(state);
@@ -203,18 +210,18 @@ function Jackfish(params) {
     let double = doubleM[i][j];
 
     // Calculate return by hitting
-    let hit = hitReturns(i, transpose(rM)[j], odds);
+    let hit = hitReturns(i, transpose(rM)[j], comp);
     hitM[i][j] = hit;
 
     // Decide whether to surrender if possible
     let ret = Math.max(split, hit, stand, double); // Return of best move
-    let sur = (params.surrender === 'late' || (params.surrender === 'early' && dealer !== -4 && dealer !== -3)) &&
+    let sur = (params.surrender === 'late' || (params.surrender === 'early' && dealer !== DEALER_ACE && dealer !== DEALER_TEN)) &&
               ret < -.5;
-    if(params.surrender === 'early' && dealer === -4) {
-      let bjOdds = odds[DEALER_STATES.indexOf(-3)];
+    if(params.surrender === 'early' && dealer === DEALER_ACE) {
+      let bjOdds = comp[DEALER_STATES.indexOf(DEALER_TEN)];
       sur = ret * (1 - bjOdds) - bjOdds < -.5;
-    } else if(params.surrender === 'early' && dealer === -3) {
-      let bjOdds = odds[DEALER_STATES.indexOf(-4)];
+    } else if(params.surrender === 'early' && dealer === DEALER_TEN) {
+      let bjOdds = comp[DEALER_STATES.indexOf(DEALER_ACE)];
       sur = ret * (1 - bjOdds) - bjOdds < -.5;
     }
 
@@ -236,7 +243,7 @@ function Jackfish(params) {
   function createSimulation(player, dealer, forceMove) {
     let p = elemsToIndices(player);
     let cards = Math.round(52 * params.count.decks);
-    let comp = [];
+    let compCopy = [];
 
     return {
       config: (p_, d) => {
@@ -244,50 +251,41 @@ function Jackfish(params) {
         dealer = d;
       },
       run: (n) => {
-        let r = 0;
+        let meanR = 0;
+        let frequencies = {};
         let playerAndDealer = false;
-        if(player && dealer) {
-          playerAndDealer = true;
-        } else if(player && !dealer) {
+        if(player && !dealer) {
           dealer = player;
+          player = undefined;
         }
+
         for(let i = 0; i < n; i++) {
-          for(let j = 0; j < odds.length; j++) {
-            comp[j] = odds[j];
+          // Copy comp because playHand manipulates it
+          for(let j = 0; j < comp.length; j++) {
+            compCopy[j] = comp[j];
           }
-          if(forceMove) {
-            r += playHand(
-              comp,
-              cards,
-              DEALER_STATES.indexOf(dealer),
-              p,
-              false,
-              forceMove
-            ) / n;
-          } else if(playerAndDealer) {
-            r += playHand(
-              comp,
-              cards,
-              DEALER_STATES.indexOf(dealer),
-              p
-            ) / n;
-          } else if(dealer) {
-            r += playHand(
-              comp,
-              cards,
-              DEALER_STATES.indexOf(dealer),
-            ) / n;
+          let r; // r * initial bet = money after hand
+          let options = {
+
+          };
+          r = playHand(compCopy, cards, {
+            dealer: DEALER_STATES.indexOf(dealer),
+            player: p,
+            forceMove : forceMove
+          });
+          meanR += r / n;
+          if(!frequencies[r]) {
+            frequencies[r] = 1;
           } else {
-            r += playHand(
-              comp,
-              cards,
-            ) / n;
+            frequencies[r]++;
           }
         }
-        console.log(100 * r);
+        frequencies.mean = meanR;
+        return frequencies;
       }
     }
 
+    // Converts an array of elements of CARD_STATES to indices
     function elemsToIndices(p) {
       if(!p) return p;
       let a = [];
@@ -298,60 +296,112 @@ function Jackfish(params) {
     }
   }
 
-  // fixDealer prevents the dealer from hitting
-  function playHand(comp, cards, c, p, fixDealer, forceMove) {
-    let dealer;
-    cards = {cards};
-    let P = progressionMatrix();
-    if(c === undefined) {
-      c = drawCard(comp, cards);
+  // comp is a column vector representing the deck composition
+  // cards are number of cards left in deck
+  // options.dealer is the index of dealer card
+  // options.player is a length 2 vector with the indices of the player cards
+  // options.fixDealer prevents the dealer from hitting
+  // options.forceMove dictates which move the player must play
+  // options.noDouble
+  function playHand(comp, cards, options) {
+    if(typeof cards === 'number') {
+      cards = { cards }; // Make it on object so we can reference it
     }
-    dealer = DEALER_STATES[c];
-    let p1, p2, player;
-    if(!p) {
-      p1 = drawCard(comp, cards);
-      p2 = drawCard(comp, cards);
+    if(!options) {
+      options = {};
+    }
+
+    let dealer,   // Dealer hand
+        player,   // Player hand
+        pair,     // Boolean: if player hand is a pair
+        state,    // Player state; the hand but with blackjack and pair information
+        half;     // Half of the player value
+    let double = false; // Whether or not we doubled
+
+    const P = progressionMatrix();
+
+    // Draw random dealer card if not specified
+    if(options.dealer === undefined) {
+      options.dealer = drawCard(comp, cards);
+    }
+    dealer = DEALER_STATES[options.dealer];
+
+    // Draw player cards
+    let p = []; // List of player cards
+    if(!options.player) {
+      p[0] = drawCard(comp, cards);
+      p[1] = drawCard(comp, cards);
     } else {
-      p1 = p[0];
-      p2 = p[1];
+      p[0] = options.player[0];
+      p[1] = options.player[1];
     }
-    player = P[HAND_STATES.indexOf(P[HAND_STATES.indexOf(0)][p1])][p2];
-    let pair = p1 === p2;
-    let state;
-    let half;
-    if((CARD_STATES[p1] === 10 && CARD_STATES[p2] === 43) || (CARD_STATES[p2] === 10 && CARD_STATES[p1] === 43)) {
-      state = -1;
+
+    // Determine player hand
+    player = HAND_STATES.indexOf(0);
+    for(let card of p) {
+      player = HAND_STATES.indexOf(P[player][card]);
+    }
+    player = HAND_STATES[player];
+    pair = p.length === 2 && p[0] === p[1];
+
+    // Determine state
+    if((CARD_STATES[p[0]] === 10 && CARD_STATES[p[1]] === ACE) || (CARD_STATES[p[1]] === 10 && CARD_STATES[p[0]] === ACE)) {
+      // Player blackjack
+      state = BLACKJACK;
     } else if(pair && player === 44) {
+      // Pair of aces
       half = 11;
       state = createHand(half, true, true);
     } else if(pair) {
+      // Pair of anything but aces
       half = player / 2;
       state = createHand(half, false, true);
     } else {
       state = player;
     }
-    let double = false;
-    if(state !== -1) {
+
+    if(state !== BLACKJACK) {
+      // Determine action
       let action;
-      if(forceMove) {
-        action = forceMove;
+      if(options.forceMove) {
+        action = options.forceMove;
       } else {
         action = getTable(state, dealer)[0];
       }
+
+      // Hand no doubling
+      if(options.noDouble && action === 'D') {
+        action = 'H';
+      } else if(options.noDouble && action === 'd') {
+        action = 'S';
+      }
+
+      // Do said action
       if(action === 'P') {
-        dealer = simDealer(P, comp, cards, dealer);
-        let r1 = playHand(comp, cards.cards, c, [p1, drawCard(comp, cards)], dealer);
-        if(r1 === 1.5) r1 = 1;
-        let r2 = playHand(comp, cards.cards, c, [p2, drawCard(comp, cards)], dealer);
+        if(!options.fixDealer) {
+          dealer = simDealer(P, comp, cards, dealer);
+        }
+        // Fix dealer card because all splits happen on the same table
+        let options_ = {
+          player: [p[0], drawCard(comp, cards)],
+          dealer: options.dealer,
+          fixDealer: dealer,
+          noDouble: !params.doubleAfterSplit
+        };
+        let r1 = playHand(comp, cards, options_);
+        options.player = [p[1], drawCard(comp, cards)]
+        let r2 = playHand(comp, cards, options_);
+        if(r1 === 1.5) r1 = 1; // Blackjack after split isn't natural
         if(r2 === 1.5) r2 = 1;
         return r1 + r2;
       } else if(action === 'D' || action === 'd') {
         double = true;
         player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
       } else {
+        // Hit until table says not to
         while(action === 'H') {
           player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
-          if(player !== -2) {
+          if(player !== BUST) {
             action = getTable(player, dealer)[0];
           } else {
             break;
@@ -360,19 +410,20 @@ function Jackfish(params) {
       }
     }
 
-    if(player === -2 && double) {
+    if(player === BUST && double) {
+      // Twice the losses for twice the bet
       return -2;
-    } else if(player === -2) {
+    } else if(player === BUST) {
       return -1;
-    } else if(fixDealer) {
-      dealer = fixDealer;
+    } else if(options.fixDealer) {
+      dealer = options.fixDealer;
     } else {
       dealer = simDealer(P, comp, cards, dealer);
     }
 
-    if(state === -1 && dealer === -1) {
+    if(state === BLACKJACK && dealer === BLACKJACK) {
       return -1; // Player and dealer blackjack
-    } else if(state === -1) {
+    } else if(state === BLACKJACK) {
       return 1.5; // Player blackjack
     }
 
@@ -383,6 +434,7 @@ function Jackfish(params) {
     } else if(pv === dv) {
       return 0;
     } else {
+      // To account for peeking, we say doubling and losing is only -1 on dealer Blackjack
       return double && dv !== 22 ? -2 : -1;
     }
   }
@@ -399,7 +451,7 @@ function Jackfish(params) {
 
   // Run dealer until it hits an endstate or bust
   function simDealer(P, comp, cards, dealer) {
-    while((dealer & 0x1f) < 17 || dealer === -3 || dealer === -4 || (params.soft17 && dealer === 49)) {
+    while((dealer & 0x1f) < 17 || dealer === DEALER_TEN || dealer === DEALER_ACE || (params.soft17 && dealer === 49)) {
       let nextCard = drawCard(comp, cards);
       dealer = P[HAND_STATES.indexOf(dealer)][nextCard];
     }
@@ -408,44 +460,44 @@ function Jackfish(params) {
 
   /*-- High Level Functions --*/
 
-  // Odds that we draw each card
-  function drawOdds(count) {
-    // The odds for a deck with no cards pulled
-    let baseOdds = (() => {
+  // Chance that we draw each card
+  function deckComp(count) {
+    // Composition for a deck with no cards pulled
+    let baseComp = (() => {
       let a = fillArray(CARD_ODDS, 10);
       a[8] = TEN_ODDS;
       return a;
     })();
     switch(count.system) {
       case 'none':
-        return baseOdds;
+        return baseComp;
       case 'hilo':
-        return hiloOdds(count);
+        return hiloComp(count);
       default:
-        return baseOdds;
+        return baseComp;
     }
   }
 
-  function hiloOdds(count) {
+  function hiloComp(count) {
     const TEN_HIGH_RATIO = 1 - ACE_HIGH_RATIO;
 
-    let odds = [];
+    let comp = [];
     loop(0, 10, i => {
       if(i === 9) {
         // Ace
-        odds.push(CARD_ODDS + ACE_HIGH_RATIO * count.getTc() / 104);
+        comp.push(CARD_ODDS + ACE_HIGH_RATIO * count.getTc() / 104);
       } else if(i === 8) {
         // 10
-        odds.push(TEN_ODDS + TEN_HIGH_RATIO * count.getTc() / 104);
+        comp.push(TEN_ODDS + TEN_HIGH_RATIO * count.getTc() / 104);
       } else if(i <= 5) {
         // 2-6
-        odds.push(CARD_ODDS - count.getTc() / 520);
+        comp.push(CARD_ODDS - count.getTc() / 520);
       } else {
         // 7-9
-        odds.push(CARD_ODDS);
+        comp.push(CARD_ODDS);
       }
     });
-    return odds;
+    return comp;
   }
 
   // P[state][card] = new state
@@ -456,22 +508,22 @@ function Jackfish(params) {
       a[i] = [];
       let [value, soft] = getHandDetails(hand);
       CARD_STATES.forEach((card, j) => {
-        let cardValue = card === 43 ? 1 : card;
-        if((hand === -3 && card === 43) || (hand === -4 && card === 10)) {
+        let cardValue = card === ACE ? 1 : card;
+        if((hand === DEALER_TEN && card === ACE) || (hand === DEALER_ACE && card === 10)) {
           // Blackjack
-          a[i][j] = -1;
-        } else if(value + cardValue === 21 || (card === 43 && value === 10)) {
+          a[i][j] = BLACKJACK;
+        } else if(value + cardValue === 21 || (card === ACE && value === 10)) {
           // 21, but not blackjack
           a[i][j] = 21;
-        } else if((card === 43 && value < 11)) {
+        } else if((card === ACE && value < 11)) {
           // <11 to soft hand
-          a[i][j] = value + 43;
+          a[i][j] = value + ACE;
         } else if(soft && value + cardValue > 21) {
           // Ace goes from 10 -> 1
           a[i][j] = value + cardValue - 10;
         } else if(value + cardValue > 21) {
           // Bust
-          a[i][j] = -2;
+          a[i][j] = BUST;
         } else {
           // hard -> hard or soft -> soft
           a[i][j] = value + cardValue + soft;
@@ -483,7 +535,7 @@ function Jackfish(params) {
   }
 
   // Create transition matrix for the player on hit
-  function hitMatrix(odds) {
+  function hitMatrix(comp) {
     let P = progressionMatrix();
 
     let a = [];
@@ -491,7 +543,7 @@ function Jackfish(params) {
       a[i] = [];
       HAND_STATES.forEach((hand2, j) =>
         a[i][j] = CARD_STATES.reduce((sum, card, k) =>
-          sum + odds[k] * (P[i][k] === hand2), 0
+          sum + comp[k] * (P[i][k] === hand2), 0
         )
       );
     });
@@ -499,7 +551,7 @@ function Jackfish(params) {
     return a;
   }
 
-  function endMatrix(odds, soft17, cards) {
+  function endMatrix(comp, soft17, cards) {
     let P = progressionMatrix();
     let states = [];
     let a = [];
@@ -507,14 +559,14 @@ function Jackfish(params) {
     DEALER_STATES.forEach((dealer, c) => {
       // Initialize the state matrix
       states[c] = zeroes([HAND_STATES.length, CARD_STATES.length]);
-      states[c][HAND_STATES.indexOf(dealer)] = odds;
+      states[c][HAND_STATES.indexOf(dealer)] = comp;
 
-      // Peeked cards have weighted odds
+      // Peeked cards have weighted chances
       let weight = 1;
-      if(dealer === -3) {
-        weight = 1 / (1 - odds[DEALER_STATES.indexOf(-4)]); // One ten. Dealer can't have an ace.
-      } else if(dealer === -4) {
-        weight = 1 / (1 - odds[DEALER_STATES.indexOf(-3)]); // One ace. Dealer can't have a 10.
+      if(dealer === DEALER_TEN) {
+        weight = 1 / (1 - comp[DEALER_STATES.indexOf(DEALER_ACE)]); // One ten. Dealer can't have an ace.
+      } else if(dealer === DEALER_ACE) {
+        weight = 1 / (1 - comp[DEALER_STATES.indexOf(DEALER_TEN)]); // One ace. Dealer can't have a 10.
       }
 
       // 12 is the maximum size for a blackjack hand
@@ -523,10 +575,10 @@ function Jackfish(params) {
         HAND_STATES.forEach((hand, I) => {
           HAND_STATES.forEach((hand_, i) => {
             let [value, soft] = getHandDetails(hand_);
-            let endState = ((value >= 17 && !(value === 17 && soft && soft17)) || hand_ === -2);
+            let endState = ((value >= 17 && !(value === 17 && soft && soft17)) || hand_ === BUST);
             CARD_STATES.forEach((card, j) => {
               // Skip Blackjack
-              if((hand_ === -3 && card === 43) || (hand_ === -4 && card === 10)) {
+              if((hand_ === DEALER_TEN && card === ACE) || (hand_ === DEALER_ACE && card === 10)) {
                 return;
               }
 
@@ -535,14 +587,14 @@ function Jackfish(params) {
                 // Make sure (state i) is reachable from (dealer card c)
                 let total = vtotal(states[c][i]);
                 if(total > 0) {
-                  // Shift the odds as if we pulled (card j)
-                  let newOdds = pullCard(states[c][i], j, cards - t);
+                  // Shift the composition as if we pulled (card j)
+                  let newComp = pullCard(states[c][i], j, cards - t);
                   // Weight the new odds if necessary
-                  if(weight && (hand_ === -3 || hand_ === -4)) {
-                    newOdds = vscale(newOdds, weight);
+                  if(weight && (hand_ === DEALER_TEN || hand_ === DEALER_ACE)) {
+                    newComp = vscale(newComp, weight);
                   }
                   // Add that deck distribution to (state I)
-                  newState[I] = vsum(newState[I], vscale(newOdds, states[c][i][j] / total));
+                  newState[I] = vsum(newState[I], vscale(newComp, states[c][i][j] / total));
                 }
               }
             });
@@ -585,7 +637,7 @@ function Jackfish(params) {
         endOdds.forEach((odds, k) => {
           let dHand = HAND_STATES[k];
           let v = getHandDetails(dHand)[0]; // Dealer value
-          if(hand === -2) {
+          if(hand === BUST) {
             r -= odds;
           } else {
             r += odds * ((value > v) - (value < v));
@@ -599,18 +651,18 @@ function Jackfish(params) {
   }
 
   // Calculate player's return by hitting
-  function hitReturns(i, r, odds) {
-    return dot(hitMatrix(odds)[i], r);
+  function hitReturns(i, r, comp) {
+    return dot(hitMatrix(comp)[i], r);
   }
 
   // Calculate player's return by splitting
-  function splitReturns(i, r, odds) {
-    return 2 * dot(hitMatrix(odds)[i], r);
+  function splitReturns(i, r, comp) {
+    return 2 * dot(hitMatrix(comp)[i], r);
   }
 
-  function doubleReturns(stand, odds) {
+  function doubleReturns(stand, comp) {
     let a = [];
-    let H = hitMatrix(odds);
+    let H = hitMatrix(comp);
     HAND_STATES.forEach((hand, i) => {
       let hitState = H[i];
       a[i] = mmultiply(hitState, transpose(stand)).map(x => 2*x);
@@ -648,13 +700,13 @@ function Jackfish(params) {
       value = hand & 0x1f;
       soft = hand & 0x20;
       pair = hand & 0x40;
-    } else if(hand === -1) {
+    } else if(hand === BLACKJACK) {
       value = 22;
-    } else if(hand === -2) {
+    } else if(hand === BUST) {
       value = -999;
-    } else if(hand === -3) {
+    } else if(hand === DEALER_TEN) {
       value = 10;
-    } else if(hand === -4) {
+    } else if(hand === DEALER_ACE) {
       value = 11;
       soft = 0x20;
     }
@@ -670,15 +722,15 @@ function Jackfish(params) {
 
   // Index state,dealer matrix: m[state][dealer]
   function iSDMatrix(m, i, j) {
-    if(j === 10) j = -3;
-    if(j === 43) j = -4;
+    if(j === 10) j = DEALER_TEN;
+    if(j === ACE) j = DEALER_ACE;
     return m[HAND_STATES.indexOf(i)][DEALER_STATES.indexOf(j)];
   }
 
   // Index dealer,state matrix: m[dealer][state]
   function iDSMatrix(m, i, j) {
-    if(i === 10) i = -3;
-    if(i === 43) i = -4;
+    if(i === 10) i = DEALER_TEN;
+    if(i === ACE) i = DEALER_ACE;
     return m[DEALER_STATES.indexOf(i)][HAND_STATES.indexOf(j)];
   }
 
@@ -694,8 +746,8 @@ function Jackfish(params) {
 
   // Index dealer array: v[dealer]
   function iDealer(v, i) {
-    if(i === 10) i = -3;
-    if(i === 43) i = -4;
+    if(i === 10) i = DEALER_TEN;
+    if(i === ACE) i = DEALER_ACE;
     return v[findHand(i, true)];
   }
 
@@ -796,10 +848,10 @@ function Jackfish(params) {
 
   // Picks random index from weighted probability array
   function pickFromArray(a) {
-    let x = Math.random(),
+    let x = Math.random() * vtotal(a),
         i = 0;
     while(x > 0) {
-      x -= a[i++];
+      x -= a[i++ % a.length];
     }
     return i - 1;
   }

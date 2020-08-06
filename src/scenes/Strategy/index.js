@@ -18,8 +18,8 @@ class Strategy extends React.Component {
     let table = jackfish.getTable();
     this.state = { jackfish, table, selection: null };
 
-    let sim = jackfish.createSimulation([5, 6], -4, 'D');
-    sim.run(10000);
+    let sim = jackfish.createSimulation([2, 2], 3, 'P');
+    console.log(sim.run(100000));
   }
 
   updateEngine(params) {
