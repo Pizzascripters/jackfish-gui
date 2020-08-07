@@ -45,7 +45,7 @@ function MainHeader(props) {
     {params.soft17 ? 'Dealer Hits Soft 17' : 'Dealer Stands on 17'}
     <div className='small'>{params.blackjack === 1.5 ? 'Blackjack pays 3:2' : 'Blackjack pays 6:5'}</div>
     {surrender}
-    {params.doubleAfterSplit ? null : <div class='small'>No Double After Split</div>}
+    {params.split.double ? null : <div className='small'>No Double After Split</div>}
   </div>;
 }
 

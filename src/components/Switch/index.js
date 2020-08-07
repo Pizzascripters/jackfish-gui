@@ -4,8 +4,9 @@ import './style.css';
 class Switch extends React.Component {
   constructor(props) {
     super(props);
+    this.props.setChangeFunction(this.setEnabled.bind(this));
     this.handleClick = this.handleClick.bind(this);
-    this.state = {enabled: props.enabled}
+    this.state = {enabled: props.enabled};
   }
 
   handleClick() {
@@ -13,6 +14,11 @@ class Switch extends React.Component {
       enabled: !this.state.enabled
     });
     this.props.onChange(!this.state.enabled); // React hasn't set the state yet
+  }
+
+  setEnabled(enabled) {
+    this.setState({ enabled });
+    this.props.onChange(enabled);
   }
 
   render() {

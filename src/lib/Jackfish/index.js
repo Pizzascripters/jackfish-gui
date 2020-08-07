@@ -211,7 +211,7 @@ function Jackfish(params) {
     // Calculate return by splitting
     let split = -Infinity;
     if(pair) {
-      let r = params.doubleAfterSplit ? rdM : rM;
+      let r = params.split.double ? rdM : rM;
       split = splitReturns(findHand(state), transpose(r)[j], comp);
       iDealer(splitM, state)[j] = split;
       state = state === ACE ? 44 : state * 2; // State before split
@@ -394,7 +394,7 @@ function Jackfish(params) {
           player: [p[0], drawCard(comp, cards)],
           dealer: options.dealer,
           fixDealer: dealer,
-          noDouble: !params.doubleAfterSplit
+          noDouble: !params.split.double
         };
         let r1 = playHand(comp, cards, options_);
         options.player = [p[1], drawCard(comp, cards)]

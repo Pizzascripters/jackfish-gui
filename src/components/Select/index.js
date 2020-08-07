@@ -3,15 +3,16 @@ import './style.css';
 
 class Select extends React.Component {
   constructor(props) {
-    super(props)
+    super(props);
+    this.props.setChangeFunction(this.handleClick.bind(this));
     this.state = {value: 0};
   }
 
-  handleClick(i) {
+  handleClick(i, skipListeners) {
     this.setState({
       value: i
     });
-    this.props.onChange(i);
+    this.props.onChange(i, skipListeners);
   }
 
   render() {
