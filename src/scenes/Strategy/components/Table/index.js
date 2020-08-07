@@ -93,6 +93,16 @@ class Table extends React.Component  {
     this.state = {selection: null}
   }
 
+  onClick(e) {
+    e.preventDefault();
+    if(e.target.classList[0] !== 'box') {
+      this.setState({
+        selection: null
+      });
+      this.props.onClear();
+    }
+  }
+
   onSelect(player, dealer) {
     this.props.onSelect(player, dealer);
     this.setState({
@@ -101,7 +111,7 @@ class Table extends React.Component  {
   }
 
   render() {
-    return <div className='table'>
+    return <div className='table' onClick={this.onClick.bind(this)}>
       <TableHead />
       {PLAYER_HANDS.map((group, i) => {
         if(!window.k) window.k = 0; // Iterator for keys

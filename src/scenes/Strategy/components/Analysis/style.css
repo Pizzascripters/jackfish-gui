@@ -5,6 +5,13 @@
 #analysis > #header {
   font-size: 2.0vw;
 }
+#analysis > #header.bottomMargin {
+  margin-bottom: 20px;
+}
+
+#analysis > #insurance {
+  font-size: 1.8vw;
+}
 
 #analysis > .bestmove {
   font-size: 1.4vw;
@@ -23,6 +30,10 @@
 #analysis > .dealerInfo > div:not(first-child),
 #analysis > .actionInfo > div:not(first-child) {
   font-size: 1vw;
+}
+
+#analysis .small {
+  font-size: 24px;
 }
 
 .deepred {

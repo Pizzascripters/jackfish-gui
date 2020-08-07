@@ -44,26 +44,35 @@ function getParam(label) {
 
 function update(f) {
   f({
-    count: new Count('none', 0, 4),
+    blackjack: getParam('Blackjack').value === '3:2' ? 3/2 : 6/5,
+    count: new Count('hilo', 12, 4),
     soft17: getParam('Soft 17').value === 'Hits',
     surrender: getParam('Surrender').value.toLocaleLowerCase(),
     doubleAfterSplit: getParam('Double After Split').value
   });
 }
 
-function Parameters(props) {
-  // TODO: Double after split switch
-  // TODO: Deck text input
-  return <div id='parameters' className='section'>
-    {params.map((param, i) => {
-      if(param.type === 'Select') {
-        return <Select key={i} label={param.label} options={param.options} onChange={param.onChange.bind(null, props.updateEngine)}/>
-      } else if(param.type === 'Switch') {
-        return <Switch key={i} label={param.label} enabled={param.value} onChange={param.onChange.bind(null, props.updateEngine)}/>
-      }
-      return null;
-    })}
-  </div>;
+class Parameters extends React.Component {
+  constructor(props) {
+    super(props);
+    update(props.updateEngine);
+    props.onLoad();
+  }
+
+  render() {
+    // TODO: Double after split switch
+    // TODO: Deck text input
+    return <div id='parameters' className='section'>
+      {params.map((param, i) => {
+        if(param.type === 'Select') {
+          return <Select key={i} label={param.label} options={param.options} onChange={param.onChange.bind(null, this.props.updateEngine)}/>
+        } else if(param.type === 'Switch') {
+          return <Switch key={i} label={param.label} enabled={param.value} onChange={param.onChange.bind(null, this.props.updateEngine)}/>
+        }
+        return null;
+      })}
+    </div>;
+  }
 }
 
 export default Parameters;

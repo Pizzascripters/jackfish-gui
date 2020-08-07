@@ -113,6 +113,18 @@ function Jackfish(params) {
     if(dealer === ACE) dealer = DEALER_ACE;
     return bestMove(player, dealer, split);
   };
+  this.takeInsurance = () => {
+    if(params.count.system === 'hilo') {
+      /*
+       * In systems where Aces and Tens are counted the same,
+       * There's one more ten and one less ace than we think there is
+       * Because the dealer has an Ace showing face up
+       * */
+      return comp[CARD_STATES.indexOf(10)] + 1/(52 * params.count.decks) > 1/3;
+    } else {
+      return comp[CARD_STATES.indexOf(10)] > 1/3;
+    }
+  }
 
   /*-- Private Variables --*/
   let comp;
@@ -253,7 +265,6 @@ function Jackfish(params) {
       run: (n) => {
         let meanR = 0;
         let frequencies = {};
-        let playerAndDealer = false;
         if(player && !dealer) {
           dealer = player;
           player = undefined;
@@ -265,9 +276,6 @@ function Jackfish(params) {
             compCopy[j] = comp[j];
           }
           let r; // r * initial bet = money after hand
-          let options = {
-
-          };
           r = playHand(compCopy, cards, {
             dealer: DEALER_STATES.indexOf(dealer),
             player: p,

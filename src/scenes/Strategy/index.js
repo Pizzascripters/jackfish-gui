@@ -1,5 +1,4 @@
 import React from 'react';
-import Count from '../../lib/Count.js';
 import Jackfish from '../../lib/Jackfish';
 import Parameters from './components/Parameters';
 import Table from './components/Table';
@@ -9,17 +8,7 @@ import './style.css';
 class Strategy extends React.Component {
   constructor(props) {
     super(props);
-    let jackfish = new Jackfish({
-      count: new Count('hilo', 0, 1),
-      soft17: true,
-      surrender: 'none',
-      doubleAfterSplit: true
-    });
-    let table = jackfish.getTable();
-    this.state = { jackfish, table, selection: null };
-
-    let sim = jackfish.createSimulation([2, 2], 3, 'P');
-    console.log(sim.run(100000));
+    this.state = { selection: null, jackfish: new Jackfish() };
   }
 
   updateEngine(params) {
@@ -34,15 +23,28 @@ class Strategy extends React.Component {
     });
   }
 
+  onClear() {
+    this.setState({
+      selection: null
+    });
+  }
+
+  doTable() {
+    this.setState({
+      table: this.state.jackfish.getTable()
+    })
+  }
+
   render() {
     return <div id='strategy'>
       <Parameters
-        jackfish={this.state.jackfish}
         updateEngine={this.updateEngine.bind(this)}
+        onLoad={this.doTable.bind(this)}
       />
       <Table
         jackfish={this.state.jackfish}
         onSelect={this.onSelect.bind(this)}
+        onClear={this.onClear.bind(this)}
       />
       <Analysis
         jackfish={this.state.jackfish}
