@@ -240,7 +240,9 @@ function Jackfish(params) {
     // Decide whether to surrender if possible
     let ret = Math.max(split, hit, stand, double); // Return of best move
     let sur = (params.surrender === 'late' || (params.surrender === 'early' && dealer !== DEALER_ACE && dealer !== DEALER_TEN)) && ret < -.5;
-    if(params.surrender === 'early' && dealer === DEALER_ACE) {
+    if(params.surrender === 'early' && !params.peek) {
+      sur = ret < -.5;
+    } else if(params.surrender === 'early' && dealer === DEALER_ACE) {
       let bjOdds = comp[DEALER_STATES.indexOf(DEALER_TEN)];
       sur = ret * (1 - bjOdds) - bjOdds < -.5;
     } else if(params.surrender === 'early' && dealer === DEALER_TEN) {
@@ -456,8 +458,12 @@ function Jackfish(params) {
     } else if(pv === dv) {
       return 0;
     } else {
-      // To account for peeking, we say doubling and losing is only -1 on dealer Blackjack
-      return double && dv !== 22 ? -2 : -1;
+      if(params.peek) {
+        // To account for peeking, we say doubling and losing is only -1 on dealer Blackjack
+        return double && dv !== 22 ? -2 : -1;
+      } else {
+        return double ? -2 : -1;
+      }
     }
   }
 
@@ -585,14 +591,14 @@ function Jackfish(params) {
 
       // Peeked cards have weighted chances
       let weight = 1;
-      if(dealer === DEALER_TEN) {
+      if(params.peek && dealer === DEALER_TEN) {
         weight = 1 / (1 - comp[DEALER_STATES.indexOf(DEALER_ACE)]); // One ten. Dealer can't have an ace.
-      } else if(dealer === DEALER_ACE) {
+      } else if(params.peek && dealer === DEALER_ACE) {
         weight = 1 / (1 - comp[DEALER_STATES.indexOf(DEALER_TEN)]); // One ace. Dealer can't have a 10.
       }
 
       // 12 is the maximum size for a blackjack hand
-      for(let t = 0; t < 12; t++) {
+      loop(0, 12, t => {
         let newState = zeroes([HAND_STATES.length, CARD_STATES.length]);
         HAND_STATES.forEach((hand, I) => {
           HAND_STATES.forEach((hand_, i) => {
@@ -600,7 +606,7 @@ function Jackfish(params) {
             let endState = ((value >= 17 && !(value === 17 && soft && soft17)) || hand_ === BUST);
             CARD_STATES.forEach((card, j) => {
               // Skip Blackjack
-              if((hand_ === DEALER_TEN && card === ACE) || (hand_ === DEALER_ACE && card === 10)) {
+              if(params.peek && ((hand_ === DEALER_TEN && card === ACE) || (hand_ === DEALER_ACE && card === 10))) {
                 return;
               }
 
@@ -612,7 +618,7 @@ function Jackfish(params) {
                   // Shift the composition as if we pulled (card j)
                   let newComp = pullCard(states[c][i], j, cards - t);
                   // Weight the new odds if necessary
-                  if(weight && (hand_ === DEALER_TEN || hand_ === DEALER_ACE)) {
+                  if(weight !== 1 && (hand_ === DEALER_TEN || hand_ === DEALER_ACE)) {
                     newComp = vscale(newComp, weight);
                   }
                   // Add that deck distribution to (state I)
@@ -623,7 +629,7 @@ function Jackfish(params) {
           });
         });
         states[c] = newState;
-      }
+      });
     });
 
     DEALER_STATES.forEach((dealer, c) => {

@@ -12,15 +12,18 @@ let params = [
   new Param('Select', 'Resplit', 'Allowed', 'No Aces', 'Never'),
   new Param('Select', 'Doubling', '2 Cards', 'Anytime'),
   new Param('Select', 'Min Double', 'None', '8', '9', '10', '11'),
+  new Param('Switch', 'Peek Aces and Tens', true),
   new Param('Switch', 'One Card After Ace Split', true),
   new Param('Switch', 'Double After Split', true),
 ];
+// Two max hands and no resplitting are equivalent
 getParam('Max Hands').on('Two', () => {
   getParam('Resplit').set('Never', true);
 });
 getParam('Resplit').on('Never', () => {
   getParam('Max Hands').set('Two', true);
 });
+// >2 max hands with no resplitting is a contradiction
 getParam('Max Hands').on('Four', () => {
   if(getParam('Resplit').value === 'Never') {
     getParam('Resplit').set('Allowed', true);
@@ -31,6 +34,7 @@ getParam('Max Hands').on('Unlimited', () => {
     getParam('Resplit').set('Allowed', true);
   }
 });
+// 2 max hands with resplitting is a contradiction
 getParam('Resplit').on('No Aces', () => {
   if(getParam('Max Hands').value === 'Two') {
     getParam('Max Hands').set('Unlimited', true);
@@ -39,6 +43,17 @@ getParam('Resplit').on('No Aces', () => {
 getParam('Resplit').on('Allowed', () => {
   if(getParam('Max Hands').value === 'Two') {
     getParam('Max Hands').set('Unlimited', true);
+  }
+});
+// No peek with late surrender is a contradiction
+getParam('Peek Aces and Tens').on(false, () => {
+  if(getParam('Surrender').value === 'Late') {
+    getParam('Surrender').set('Early', true);
+  }
+});
+getParam('Surrender').on('Late', () => {
+  if(getParam('Peek Aces and Tens').value === false) {
+    getParam('Peek Aces and Tens').set(true, true);
   }
 });
 
@@ -145,9 +160,14 @@ function update(f) {
   }
   f({
     blackjack: getParam('Blackjack').value === '3:2' ? 3/2 : 6/5,
-    count: new Count('hilo', 0, 3),
+    count: new Count('hilo', 18, 3),
+    peek: getParam('Peek Aces and Tens').value,
     soft17: getParam('Soft 17').value === 'Hits',
     surrender: getParam('Surrender').value.toLocaleLowerCase(),
+    double: {
+      anytime: getParam('Doubling').value === 'Anytime',
+      min: minDouble
+    },
     split: {
       double: getParam('Double After Split').value,
       maxHands: maxHands,
@@ -155,10 +175,6 @@ function update(f) {
       resplit: getParam('Resplit').value !== 'Never',
       resplitAces: getParam('Resplit').value !== 'No Aces',
     },
-    double: {
-      anytime: getParam('Doubling').value === 'Anytime',
-      min: minDouble
-    }
   });
 }
 

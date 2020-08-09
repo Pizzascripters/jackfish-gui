@@ -81,6 +81,7 @@ function BestMove(props) {
 
 function Dealer(props) {
   let jackfish = props.jackfish;
+  let peek = props.jackfish.getParams().peek;
   let card = props.selection[1];
   let odds = [
     jackfish.getEnd(card, 17) + jackfish.getEnd(card, 32+17),
@@ -91,10 +92,14 @@ function Dealer(props) {
     jackfish.getEnd(card, -2),
   ];
   let labels = [17, 18, 19, 20, 21, 'Bust'];
+  if(!peek) {
+    odds.splice(5, 0, jackfish.getEnd(card, -1));
+    labels.splice(5, 0, 'Blackjack');
+  }
   return <div className='dealerInfo'>
     <div>Dealer {stateToName(props.selection[1], true)}:</div>
-    {odds.map((p, i) => {
-      return <div key={i}>{labels[i]}: {formatPercent(p)}</div>
+    {labels.map((label, i) => {
+      return <div key={i}>{label}: {formatPercent(odds[i])}</div>
     })}
   </div>
 }
@@ -102,6 +107,7 @@ function Dealer(props) {
 function Actions(props) {
   if(props.selection) {
     let jackfish = props.jackfish;
+    let peek = jackfish.getParams().peek;
     let player = props.selection[0];
     let dealer = props.selection[1];
     let value = player & 0x3f
@@ -122,7 +128,7 @@ function Actions(props) {
         jackfish.getDouble(value, dealer)
       ];
     }
-    if(props.surrender === 'late') {
+    if(props.surrender === 'late' || (!peek && props.surrender === 'early')) {
       ret[4] = -.5;
     } else if(props.surrender === 'early') {
       let b = jackfish.getBJOdds(dealer);
