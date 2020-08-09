@@ -15,6 +15,9 @@ class Strategy extends React.Component {
     let jackfish = this.state.jackfish;
     jackfish.setParams(params);
     this.setState({ jackfish });
+
+    let sim = jackfish.createSimulation();
+    console.log(sim.run(10000));
   }
 
   onSelect(player, dealer) {
@@ -32,7 +35,7 @@ class Strategy extends React.Component {
   doTable() {
     this.setState({
       table: this.state.jackfish.getTable()
-    })
+    });
   }
 
   render() {

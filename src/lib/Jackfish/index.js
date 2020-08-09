@@ -363,6 +363,9 @@ function Jackfish(params) {
     player = HAND_STATES[player];
     pair = p.length === 2 && p[0] === p[1];
 
+    // Player takes insurance?
+    let insurance = dealer === ACE && this.takeInsurance();
+
     // Determine state
     if((CARD_STATES[p[0]] === 10 && CARD_STATES[p[1]] === ACE) || (CARD_STATES[p[1]] === 10 && CARD_STATES[p[0]] === ACE)) {
       // Player blackjack
@@ -388,7 +391,7 @@ function Jackfish(params) {
         action = getTable(state, dealer)[0];
       }
 
-      // Hand no doubling
+      // Handle no doubling
       if(options.noDouble && action === 'D') {
         action = 'H';
       } else if(options.noDouble && action === 'd') {
@@ -399,6 +402,14 @@ function Jackfish(params) {
       if(action === 'P') {
         if(!options.fixDealer) {
           dealer = simDealer(P, comp, cards, dealer);
+          if(insurance && dealer === BLACKJACK) {
+            insurance = 1;
+          } else if(insurance) {
+            insurance = -.5;
+          }
+        } else if(insurance) {
+          // Can't take insurance again after a split
+          insurance = 0;
         }
         // Fix dealer card because all splits happen on the same table
         let options_ = {
@@ -412,7 +423,7 @@ function Jackfish(params) {
         let r2 = playHand(comp, cards, options_);
         if(r1 === params.blackjack) r1 = 1; // Blackjack after split isn't natural
         if(r2 === params.blackjack) r2 = 1;
-        return r1 + r2;
+        return r1 + r2 + insurance;
       } else if(action === 'D' || action === 'd') {
         double = true;
         player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
@@ -434,19 +445,26 @@ function Jackfish(params) {
       }
     }
 
-    if(player === BUST && double) {
+    dealer = simDealer(P, comp, cards, dealer);
+    if(insurance && dealer === BLACKJACK) {
+      insurance = 1;
+    } else if(insurance) {
+      insurance = -.5;
+    }
+
+    if(insurance && dealer === BLACKJACK) {
+      return 0;
+    } else if(player === BUST && double) {
       // Twice the losses for twice the bet
-      return -2;
+      return -2 + insurance;
     } else if(player === BUST) {
-      return -1;
+      return -1 + insurance;
     } else if(options.fixDealer) {
       dealer = options.fixDealer;
-    } else {
-      dealer = simDealer(P, comp, cards, dealer);
     }
 
     if(state === BLACKJACK && dealer === BLACKJACK) {
-      return -1; // Player and dealer blackjack
+      return -1 + insurance; // Player and dealer blackjack
     } else if(state === BLACKJACK) {
       return params.blackjack; // Player blackjack
     }
@@ -456,13 +474,13 @@ function Jackfish(params) {
     if(pv > dv) {
       return double ? 2 : 1;
     } else if(pv === dv) {
-      return 0;
+      return insurance;
     } else {
       if(params.peek) {
         // To account for peeking, we say doubling and losing is only -1 on dealer Blackjack
-        return double && dv !== 22 ? -2 : -1;
+        return (double && dv !== 22 ? -2 : -1) + insurance;
       } else {
-        return double ? -2 : -1;
+        return (double ? -2 : -1) + insurance;
       }
     }
   }
