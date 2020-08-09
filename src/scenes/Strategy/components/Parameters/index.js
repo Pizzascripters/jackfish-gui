@@ -10,6 +10,8 @@ let params = [
   new Param('Select', 'Surrender', 'None', 'Early', 'Late'),
   new Param('Select', 'Max Hands', 'Unlimited', 'Four', 'Two'),
   new Param('Select', 'Resplit', 'Allowed', 'No Aces', 'Never'),
+  new Param('Select', 'Doubling', '2 Cards', 'Anytime'),
+  new Param('Select', 'Min Double', 'None', '8', '9', '10', '11'),
   new Param('Switch', 'One Card After Ace Split', true),
   new Param('Switch', 'Double After Split', true),
 ];
@@ -135,6 +137,12 @@ function update(f) {
   } else if(maxHands === 'Two') {
     maxHands = 2;
   }
+  let minDouble = getParam('Min Double').value;
+  if(minDouble === 'None') {
+    minDouble = 0;
+  } else {
+    minDouble = Number(minDouble);
+  }
   f({
     blackjack: getParam('Blackjack').value === '3:2' ? 3/2 : 6/5,
     count: new Count('hilo', 0, 3),
@@ -146,6 +154,10 @@ function update(f) {
       oneCardAfterAce: getParam('One Card After Ace Split').value,
       resplit: getParam('Resplit').value !== 'Never',
       resplitAces: getParam('Resplit').value !== 'No Aces',
+    },
+    double: {
+      anytime: getParam('Doubling').value === 'Anytime',
+      min: minDouble
     }
   });
 }

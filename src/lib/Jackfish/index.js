@@ -153,7 +153,7 @@ function Jackfish(params) {
       j = HAND_STATES.indexOf(BUST);
       rdM[j][i] = rM[j][i] = -1;
       j = HAND_STATES.indexOf(BLACKJACK);
-      rdM[j][i] = rM[j][i] = 1.5;
+      rdM[j][i] = rM[j][i] = params.blackjack;
     });
 
     // Calculate player's return by doubling
@@ -229,13 +229,17 @@ function Jackfish(params) {
     let double = doubleM[i][j];
 
     // Calculate return by hitting
-    let hit = hitReturns(i, transpose(rM)[j], comp);
+    let hit;
+    if(params.double.anytime) {
+      hit = hitReturns(i, transpose(rdM)[j], comp);
+    } else {
+      hit = hitReturns(i, transpose(rM)[j], comp);
+    }
     hitM[i][j] = hit;
 
     // Decide whether to surrender if possible
     let ret = Math.max(split, hit, stand, double); // Return of best move
-    let sur = (params.surrender === 'late' || (params.surrender === 'early' && dealer !== DEALER_ACE && dealer !== DEALER_TEN)) &&
-              ret < -.5;
+    let sur = (params.surrender === 'late' || (params.surrender === 'early' && dealer !== DEALER_ACE && dealer !== DEALER_TEN)) && ret < -.5;
     if(params.surrender === 'early' && dealer === DEALER_ACE) {
       let bjOdds = comp[DEALER_STATES.indexOf(DEALER_TEN)];
       sur = ret * (1 - bjOdds) - bjOdds < -.5;
@@ -404,19 +408,24 @@ function Jackfish(params) {
         let r1 = playHand(comp, cards, options_);
         options.player = [p[1], drawCard(comp, cards)]
         let r2 = playHand(comp, cards, options_);
-        if(r1 === 1.5) r1 = 1; // Blackjack after split isn't natural
-        if(r2 === 1.5) r2 = 1;
+        if(r1 === params.blackjack) r1 = 1; // Blackjack after split isn't natural
+        if(r2 === params.blackjack) r2 = 1;
         return r1 + r2;
       } else if(action === 'D' || action === 'd') {
         double = true;
         player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
       } else {
         // Hit until table says not to
-        while(action === 'H') {
+        while(action === 'H' || action === 'D') {
           player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
           if(player !== BUST) {
             action = getTable(player, dealer)[0];
           } else {
+            break;
+          }
+          if(params.double.anytime && (action === 'D' || action === 'd')) {
+            double = true;
+            player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
             break;
           }
         }
@@ -437,7 +446,7 @@ function Jackfish(params) {
     if(state === BLACKJACK && dealer === BLACKJACK) {
       return -1; // Player and dealer blackjack
     } else if(state === BLACKJACK) {
-      return 1.5; // Player blackjack
+      return params.blackjack; // Player blackjack
     }
 
     let pv = getHandDetails(player)[0]; // Player value
@@ -703,8 +712,12 @@ function Jackfish(params) {
     let a = [];
     let H = hitMatrix(comp);
     HAND_STATES.forEach((hand, i) => {
-      let hitState = H[i];
-      a[i] = mmultiply(hitState, transpose(stand)).map(x => 2*x);
+      if(hand < params.double.min) {
+        a[i] = fillArray(-Infinity, H[i].length);
+      } else {
+        let hitState = H[i];
+        a[i] = mmultiply(hitState, transpose(stand)).map(x => 2*x);
+      }
     });
     return a;
   }

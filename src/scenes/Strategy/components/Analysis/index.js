@@ -37,9 +37,9 @@ function MainHeader(props) {
   let params = props.jackfish.getParams();
   let surrender = null;
   if(params.surrender === 'early') {
-    surrender = <div class='small'>Early Surrender Allowed</div>
+    surrender = <div className='small'>Early Surrender Allowed</div>
   } else if(params.surrender === 'late') {
-    surrender = <div class='small'>Late Surrender Allowed</div>
+    surrender = <div className='small'>Late Surrender Allowed</div>
   }
   return <div id='header' className='bottomMargin'>
     {params.soft17 ? 'Dealer Hits Soft 17' : 'Dealer Stands on 17'}
@@ -132,7 +132,7 @@ function Actions(props) {
     return <div className='actionInfo'>
       <div>Actions:</div>
       {ret.map((p, i) => {
-        if(p) {
+        if(p && p > -Infinity) {
           return <div key={i}>{labels[i]}: {formatPercent(p, true)}</div>
         } else {
           return null;
