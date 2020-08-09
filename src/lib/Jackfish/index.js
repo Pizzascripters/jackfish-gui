@@ -211,10 +211,17 @@ function Jackfish(params) {
     // Calculate return by splitting
     let split = -Infinity;
     if(pair) {
-      let r = params.split.double ? rdM : rM;
-      split = splitReturns(findHand(state), transpose(r)[j], comp);
+      let r;
+      if(params.split.oneCardAfterAce && state === ACE) {
+        r = standM;
+      } else if(params.split.double) {
+        r = rdM;
+      } else {
+        r = rM;
+      }
+      split = splitReturns(findHand(state), transpose(r)[j], copy(comp), {cards:params.count.decks * 52});
       iDealer(splitM, state)[j] = split;
-      state = state === ACE ? 44 : state * 2; // State before split
+      state = pairState(state); // State before split
     }
 
     let i = HAND_STATES.indexOf(state);
@@ -272,9 +279,7 @@ function Jackfish(params) {
 
         for(let i = 0; i < n; i++) {
           // Copy comp because playHand manipulates it
-          for(let j = 0; j < comp.length; j++) {
-            compCopy[j] = comp[j];
-          }
+          compCopy = copy(comp);
           let r; // r * initial bet = money after hand
           r = playHand(compCopy, cards, {
             dealer: DEALER_STATES.indexOf(dealer),
@@ -329,14 +334,14 @@ function Jackfish(params) {
     const P = progressionMatrix();
 
     // Draw random dealer card if not specified
-    if(options.dealer === undefined) {
+    if(options.dealer === undefined || options.dealer === -1) {
       options.dealer = drawCard(comp, cards);
     }
     dealer = DEALER_STATES[options.dealer];
 
     // Draw player cards
     let p = []; // List of player cards
-    if(!options.player) {
+    if(!options.player || options.player.length === 0) {
       p[0] = drawCard(comp, cards);
       p[1] = drawCard(comp, cards);
     } else {
@@ -664,8 +669,34 @@ function Jackfish(params) {
   }
 
   // Calculate player's return by splitting
-  function splitReturns(i, r, comp) {
-    return 2 * dot(hitMatrix(comp)[i], r);
+  function splitReturns(i, r, comp, cards, hands) {
+    if(!hands) {
+      hands = 1;
+    }
+
+    let j = CARD_STATES.indexOf(HAND_STATES[i]); // Card Index
+    let hitReturns = vmultiply(hitMatrix(comp)[i], r);
+    /*
+     * The log2(maxHands) is an approximation that will always give a return below the actual return
+     * It assumes that a hand can be split only to a depth of log2(maxHands),
+     * however a hand can be split to a further depth if other hands aren't split
+     * This approximation is only deals with multiple resplits,
+     * and therefore doesn't affect the return much
+     * */
+    if(
+      params.split.resplit &&
+      hands <= Math.log2(params.split.maxHands) &&
+      !(HAND_STATES[i] === ACE && !params.split.resplitAces)
+    ) {
+      comp = pullCard(comp, j, cards.cards);
+      cards.cards--;
+      let pairChance = comp[j];
+      if(pairChance > 0) {
+        let k = pairIndex(i);
+        hitReturns[k] = pairChance * splitReturns(i, r, comp, cards, hands+1);
+      }
+    }
+    return 2 * vtotal(hitReturns);
   }
 
   function doubleReturns(stand, comp) {
@@ -767,6 +798,14 @@ function Jackfish(params) {
     }
   }
 
+  function pairState(state) {
+    return state = state === ACE ? 44 : state * 2;
+  }
+
+  function pairIndex(i) {
+    return HAND_STATES.indexOf(pairState(HAND_STATES[i]));
+  }
+
   /*-- Logic Utility Functions --*/
 
   function loop(start, end, f) {
@@ -800,10 +839,18 @@ function Jackfish(params) {
     }
   }
 
+  function copy(v) {
+    let u = [];
+    for(let i = 0; i < v.length; i++) {
+      u[i] = v[i];
+    }
+    return u;
+  }
+
   /*-- Mathy Utility Functions --*/
 
   function vtotal(u) {
-    return u.reduce((r, x, i) => r + x, 0);
+    return u.reduce((r, x) => r + x, 0);
   }
 
   function vsum(u, v) {
@@ -816,6 +863,10 @@ function Jackfish(params) {
 
   function dot(u, v) {
     return u.reduce((r, x, i) => r + x * v[i], 0);
+  }
+
+  function vmultiply(u, v) {
+    return u.map((x, i) => x * v[i]);
   }
 
   function transpose(a) {

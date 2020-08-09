@@ -33,18 +33,10 @@ getParam('Resplit').on('No Aces', () => {
   if(getParam('Max Hands').value === 'Two') {
     getParam('Max Hands').set('Unlimited', true);
   }
-  if(getParam('One Card After Ace Split').value === true) {
-    getParam('One Card After Ace Split').set(false, true);
-  }
 });
 getParam('Resplit').on('Allowed', () => {
   if(getParam('Max Hands').value === 'Two') {
     getParam('Max Hands').set('Unlimited', true);
-  }
-});
-getParam('One Card After Ace Split').on(true, () => {
-  if(getParam('Resplit').value === 'No Aces') {
-    getParam('Resplit').set('Allowed', true);
   }
 });
 
@@ -145,14 +137,15 @@ function update(f) {
   }
   f({
     blackjack: getParam('Blackjack').value === '3:2' ? 3/2 : 6/5,
-    count: new Count('hilo', 0, 6),
+    count: new Count('hilo', 0, 3),
     soft17: getParam('Soft 17').value === 'Hits',
     surrender: getParam('Surrender').value.toLocaleLowerCase(),
     split: {
       double: getParam('Double After Split').value,
       maxHands: maxHands,
       oneCardAfterAce: getParam('One Card After Ace Split').value,
-      resplitAces: getParam('Resplit').value === 'No Aces',
+      resplit: getParam('Resplit').value !== 'Never',
+      resplitAces: getParam('Resplit').value !== 'No Aces',
     }
   });
 }
