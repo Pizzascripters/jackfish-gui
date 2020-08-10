@@ -59,7 +59,7 @@ function Jackfish(params) {
   this.getCount = () => params.count;
   this.getComp = () => comp;
   this.getParams = () => params;
-  this.getReturn = () => rdM;
+  this.getReturn = () => rsM;
   this.getReturnNoDouble = () => rM;
   this.getTable = getTable;
   this.createSimulation = createSimulation;
@@ -80,27 +80,46 @@ function Jackfish(params) {
   }
   this.getBJOdds = (dealer) => {
     let bjOdds = 0;
-    if(dealer === ACE) {
+    if(dealer === ACE || dealer === DEALER_ACE) {
       bjOdds = comp[DEALER_STATES.indexOf(DEALER_TEN)];
-    } else if(dealer === 10) {
+    } else if(dealer === 10 || dealer === DEALER_TEN) {
       bjOdds = comp[DEALER_STATES.indexOf(DEALER_ACE)];
     }
     return bjOdds;
   }
-  this.getEdge = (j) => {
+  this.getEdge = j => {
     if(j === undefined) {
       let edge = 0;
-      loop(0, CARD_STATES.length, i => {
+      loop(0, DEALER_STATES.length, i => {
         edge += comp[i] * this.getEdge(i);
       });
-      return 100 * edge;
+      return edge;
     } else {
+      let dealer = DEALER_STATES[j];
       let state = mpower(hitMatrix(comp), 2)[HAND_STATES.indexOf(0)];
+      // Add blackjack to state
       state[HAND_STATES.indexOf(BLACKJACK)] = state[HAND_STATES.indexOf(21)]; // 21 after 2 cards is blackjack
       state[HAND_STATES.indexOf(21)] = 0;
-      let bjOdds = this.getBJOdds(CARD_STATES[j]);
-      let r = dot(state, transpose(rdM)[j]);
-      return r * (1 - bjOdds) - bjOdds;
+      // Remove pairs from state
+      let rPair = [];
+      CARD_STATES.forEach((card, j) => {
+        let hand = pairState(card);
+        let k = HAND_STATES.indexOf(hand);
+        let pairOdds = comp[j] * comp[j];
+        state[k] -= pairOdds;
+        rPair.push(pairOdds * getTable(card+0x40, dealer).retNS);
+      });
+      let r = dot(state, transpose(rsM)[j]) + vtotal(rPair);
+      let insurance = 0;
+      if(dealer === DEALER_ACE && takeInsurance()) {
+        insurance = 1.5*comp[CARD_STATES.indexOf(10)] - .5;
+      }
+      if(params.peek) {
+        let bjOdds = this.getBJOdds(CARD_STATES[j]);
+        return r * (1 - bjOdds) - bjOdds + insurance;
+      } else {
+        return r + insurance;
+      }
     }
   }
   this.setParams = (params_) => {
@@ -125,6 +144,13 @@ function Jackfish(params) {
       return comp[CARD_STATES.indexOf(10)] > 1/3;
     }
   }
+  defineConstants.bind(this)([
+    ['BLACKJACK', BLACKJACK],
+    ['BUST', BUST],
+    ['DEALER_TEN', DEALER_TEN],
+    ['DEALER_ACE', DEALER_ACE],
+    ['ACE', ACE],
+  ], true);
 
   /*-- Private Variables --*/
   let comp;
@@ -134,8 +160,13 @@ function Jackfish(params) {
   // Return matrices. Specifies return given player's hand and dealer's card under perfect play
   let rM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return without doubling
   let rdM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with doubling
+  let rsM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with surrendering
   let hitM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
   let splitM = zeroes([DEALER_STATES.length, DEALER_STATES.length]);
+
+  // Public functions made private
+  let getBJOdds = this.getBJOdds;
+  let takeInsurance = this.takeInsurance;
 
   /*-- Determine Matrices --*/
   function determineMatrices() {
@@ -148,12 +179,18 @@ function Jackfish(params) {
     standM = standReturns(endM);
     // Set return on 21 to be return on stand because player must stand on 21
     loop(0, DEALER_STATES.length, i => {
+      let dealer = DEALER_STATES[i];
       let j = HAND_STATES.indexOf(21);
-      rdM[j][i] = rM[j][i] = standM[j][i];
+      rsM[j][i] = rdM[j][i] = rM[j][i] = standM[j][i];
       j = HAND_STATES.indexOf(BUST);
-      rdM[j][i] = rM[j][i] = -1;
+      rsM[j][i] = rdM[j][i] = rM[j][i] = -1;
       j = HAND_STATES.indexOf(BLACKJACK);
-      rdM[j][i] = rM[j][i] = params.blackjack;
+      if(params.peek || !(dealer === DEALER_TEN || dealer === DEALER_ACE)) {
+        rsM[j][i] = rdM[j][i] = rM[j][i] = params.blackjack;
+      } else {
+        let bjOdds = getBJOdds(dealer);
+        rsM[j][i] = rdM[j][i] = rM[j][i] = params.blackjack * (1 - bjOdds) - bjOdds;
+      }
     });
 
     // Calculate player's return by doubling
@@ -192,7 +229,8 @@ function Jackfish(params) {
       DEALER_STATES.forEach((dealer, j) => {
         let move = bestMove(player & 0x3f, dealer, pair);
         if(!pair) {
-          rdM[n][j] = move[1];
+          rsM[n][j] = move.ret;
+          rdM[n][j] = move.retNS;
           rM[n][j] = Math.max(standM[n][j], hitM[n][j]);
         }
         if(m !== -1) {
@@ -202,6 +240,22 @@ function Jackfish(params) {
     });
 
     return exit();
+  }
+
+  function defineConstants(constants, list) {
+    if(list) {
+      for(let constant of constants) {
+        defineConstants.bind(this)(constant);
+      }
+    } else {
+      let c = constants;
+      Object.defineProperty(this, c[0], {
+        value: c[1],
+        configurable: true,
+        enumerable: true,
+        writable: false,
+      })
+    }
   }
 
   /*-- Move calculation --*/
@@ -237,31 +291,43 @@ function Jackfish(params) {
     }
     hitM[i][j] = hit;
 
-    // Decide whether to surrender if possible
-    let ret = Math.max(split, hit, stand, double); // Return of best move
-    let sur = (params.surrender === 'late' || (params.surrender === 'early' && dealer !== DEALER_ACE && dealer !== DEALER_TEN)) && ret < -.5;
-    if(params.surrender === 'early' && !params.peek) {
-      sur = ret < -.5;
-    } else if(params.surrender === 'early' && dealer === DEALER_ACE) {
-      let bjOdds = comp[DEALER_STATES.indexOf(DEALER_TEN)];
-      sur = ret * (1 - bjOdds) - bjOdds < -.5;
-    } else if(params.surrender === 'early' && dealer === DEALER_TEN) {
-      let bjOdds = comp[DEALER_STATES.indexOf(DEALER_ACE)];
-      sur = ret * (1 - bjOdds) - bjOdds < -.5;
+    // Determine return on surrender
+    let sur = -Infinity;
+    if(params.surrender === 'late' || (params.surrender === 'early' && !params.peek)) {
+      sur = -.5;
+    } else if(params.surrender === 'early') {
+      let bjOdds = getBJOdds(dealer);
+      sur = (bjOdds - .5) / (1 - bjOdds);
     }
 
-    // Compare returns and return best
+    // Compare returns of each move
+    let best;
     if(split > hit && split > stand && split > double) {
-      return ['P', split, sur];
+      best = new Best('P', split);
     } else if(hit > stand && hit > double) {
-      return ['H', hit, sur];
+      best = new Best('H', hit);
     } else if(stand > double) {
-      return ['S', stand, sur];
+      best = new Best('S', stand);
     } else if(hit > stand) {
-      return ['D', double, sur];
+      best = new Best('D', double);
     } else {
-      return ['d', double, sur];
+      best = new Best('d', double);
     }
+
+    // Determine if surrendering is best
+    if(sur > best.ret) {
+      best.ret = sur;
+      best.surrender = true;
+    }
+
+    function Best(action, ret) {
+      this.action = action;
+      this.ret = ret;   // Return with surrender
+      this.retNS = ret; // Return with no surrender
+      this.surrender = false;
+    }
+
+    return best;
   }
 
   /*-- Monte Carlo Simulation --*/
@@ -388,7 +454,7 @@ function Jackfish(params) {
       if(options.forceMove) {
         action = options.forceMove;
       } else {
-        action = getTable(state, dealer)[0];
+        action = getTable(state, dealer).action;
       }
 
       // Handle no doubling
@@ -432,7 +498,7 @@ function Jackfish(params) {
         while(action === 'H' || action === 'D') {
           player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
           if(player !== BUST) {
-            action = getTable(player, dealer)[0];
+            action = getTable(player, dealer).action;
           } else {
             break;
           }
@@ -531,13 +597,13 @@ function Jackfish(params) {
     loop(0, 10, i => {
       if(i === 9) {
         // Ace
-        comp.push(CARD_ODDS + ACE_HIGH_RATIO * count.getTc() / 104);
+        comp.push(CARD_ODDS + ACE_HIGH_RATIO * count.tc / 104);
       } else if(i === 8) {
         // 10
-        comp.push(TEN_ODDS + TEN_HIGH_RATIO * count.getTc() / 104);
-      } else if(i <= 5) {
+        comp.push(TEN_ODDS + TEN_HIGH_RATIO * count.tc / 104);
+      } else if(i <= 4) {
         // 2-6
-        comp.push(CARD_ODDS - count.getTc() / 520);
+        comp.push(CARD_ODDS - count.tc / 520);
       } else {
         // 7-9
         comp.push(CARD_ODDS);
@@ -777,7 +843,7 @@ function Jackfish(params) {
       soft = hand & 0x20;
       pair = hand & 0x40;
     } else if(hand === BLACKJACK) {
-      value = 22;
+      value = 999;
     } else if(hand === BUST) {
       value = -999;
     } else if(hand === DEALER_TEN) {
@@ -891,7 +957,11 @@ function Jackfish(params) {
   }
 
   function vsum(u, v) {
-    return u.map((x, i) => x + v[i]);
+    if(typeof v === 'object') {
+      return u.map((x, i) => x + v[i]);
+    } else {
+      return u.map((x, i) => x + v);
+    }
   }
 
   function vscale(u, c) {

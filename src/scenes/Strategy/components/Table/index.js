@@ -48,7 +48,7 @@ function Box(props) {
   if(props.selection !== null) {
     active = props.selection[0] === props.player && props.selection[1] === props.dealer;
   }
-  let action = ACTION_MAP[(props.cell[2] ? 'R' : '') + props.cell[0]];
+  let action = ACTION_MAP[(props.cell.surrender ? 'R' : '') + props.cell.action];
   let c = ACTION_CLASSES[action] + (active ? ' active' : '');
   return <div
     className={`box ${c}`}

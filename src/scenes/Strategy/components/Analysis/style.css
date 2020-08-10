@@ -11,6 +11,11 @@
 
 #analysis > #insurance {
   font-size: 1.8vw;
+  margin-bottom: 1vw;
+}
+
+#analysis > #edge {
+  font-size: 1.8vw;
 }
 
 #analysis > .bestmove {

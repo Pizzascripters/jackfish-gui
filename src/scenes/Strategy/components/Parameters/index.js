@@ -160,7 +160,7 @@ function update(f) {
   }
   f({
     blackjack: getParam('Blackjack').value === '3:2' ? 3/2 : 6/5,
-    count: new Count('hilo', 0, 3),
+    count: new Count('hilo', 0, 6),
     peek: getParam('Peek Aces and Tens').value,
     soft17: getParam('Soft 17').value === 'Hits',
     surrender: getParam('Surrender').value.toLocaleLowerCase(),

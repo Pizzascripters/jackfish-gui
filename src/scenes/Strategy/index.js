@@ -16,8 +16,8 @@ class Strategy extends React.Component {
     jackfish.setParams(params);
     this.setState({ jackfish });
 
-    let sim = jackfish.createSimulation();
-    console.log(sim.run(10000));
+    // let sim = jackfish.createSimulation();
+    // console.log(sim.run(10000));
   }
 
   onSelect(player, dealer) {

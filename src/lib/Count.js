@@ -1,11 +1,11 @@
 // Constructor for the count
-function Count(system, count, decks) {
+function Count(system, tc, decks) {
   this.system = system;
-  this.count = count;
+  this.tc = tc;
   this.decks = decks;
 
-  // True count
-  this.getTc = () => this.count / this.decks;
+  this.count = tc * decks;
+  this.card = 52 * decks;
 }
 
 export default Count;

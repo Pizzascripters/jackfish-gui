@@ -29,6 +29,7 @@ function Analysis(props) {
     return <div id='analysis' className='section'>
       <MainHeader jackfish={props.jackfish} />
       <Insurance jackfish={props.jackfish} />
+      <Edge jackfish={props.jackfish} />
     </div>;
   }
 }
@@ -63,6 +64,13 @@ function Insurance(props) {
   </div>;
 }
 
+function Edge(props) {
+  return <div id='edge'>
+    Player Edge: <br />
+    {formatPercent(props.jackfish.getEdge(), true)}
+  </div>;
+}
+
 function BoxHeader(props) {
   return <div id='header'>
     {stateToName(props.selection[0], true)} vs Dealer {stateToName(props.selection[1], true)}
@@ -75,7 +83,7 @@ function BestMove(props) {
   let dealer = props.selection[1];
   let pair = props.selection[0] & 0x40;
   let move = jackfish.bestMove(player, dealer, pair);
-  let action = (move[2] ? 'R' : '') + move[0];
+  let action = (move.surrender ? 'R' : '') + move.action;
   return <div className='bestmove'>{ACTION_NAMES[action]}</div>;
 }
 
