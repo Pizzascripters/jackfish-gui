@@ -5,7 +5,7 @@ class Select extends React.Component {
   constructor(props) {
     super(props);
     this.props.setChangeFunction(this.handleClick.bind(this));
-    this.state = {value: 0};
+    this.state = {value: props.value};
   }
 
   handleClick(i, skipListeners) {

@@ -1,0 +1,14 @@
+.tabs > .tabsHead {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+}
+
+.tabs > .tabsHead > button {
+  flex: 1;
+}
+
+.tabs > .tabsBody {
+  padding: 20px;
+}

@@ -1,0 +1,24 @@
+.number {
+  margin-bottom: 20px;
+}
+
+.number > input {
+  width: 200px;
+  border: none;
+  background-color: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+
+  transition: border-color .2s ease, width .5s ease;
+}
+.number > input:not(:focus) {
+  width: 50px;
+}
+
+.number > input.valid {
+  border-bottom: 2px solid #0c0;
+}
+.number > input.invalid {
+  border-bottom: 2px solid #c00;
+}

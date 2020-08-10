@@ -125,7 +125,7 @@ function Jackfish(params) {
   this.setParams = (params_) => {
     params = params_;
     determineMatrices();
-    table = undefined; // Clear table
+    getTable(false, false, false, true);
   }
   this.bestMove = (player, dealer, split) => {
     if(dealer === 10) dealer = DEALER_TEN;
@@ -201,7 +201,7 @@ function Jackfish(params) {
   }
 
   /*-- Table generation --*/
-  function getTable(player, dealer) {
+  function getTable(player, dealer, callback, recalculate) {
     function exit() {
       if(player && dealer) {
         if(dealer === 'A' || dealer === ACE) dealer = DEALER_ACE;
@@ -212,11 +212,11 @@ function Jackfish(params) {
       }
     }
 
-    if(table) {
+    if(table && !recalculate) {
       return exit();
     }
 
-    table = [];
+    let table_ = [];
 
     HAND_ORDER.forEach((player, i) => {
       if(player < 0) return;
@@ -224,18 +224,29 @@ function Jackfish(params) {
       let m = TABLE_HANDS.indexOf(player);
       let n = HAND_STATES.indexOf(player);
       if(m !== -1) {
-        table[m] = [];
+        table_[m] = [];
       }
       DEALER_STATES.forEach((dealer, j) => {
-        let move = bestMove(player & 0x3f, dealer, pair);
-        if(!pair) {
-          rsM[n][j] = move.ret;
-          rdM[n][j] = move.retNS;
-          rM[n][j] = Math.max(standM[n][j], hitM[n][j]);
+        function doCell() {
+          let move = bestMove(player & 0x3f, dealer, pair);
+          if(!pair) {
+            rsM[n][j] = move.ret;
+            rdM[n][j] = move.retNS;
+            rM[n][j] = Math.max(standM[n][j], hitM[n][j]);
+          }
+          if(m !== -1) {
+            table_[m][j] = move;
+          }
+
+          if(i === HAND_ORDER.length - 1 && j === DEALER_STATES.length - 1) {
+            // Finished
+            table = table_;
+            if(callback) {
+              callback();
+            }
+          }
         }
-        if(m !== -1) {
-          table[m][j] = move;
-        }
+        doCell();
       });
     });
 

@@ -1,20 +1,29 @@
 import React from 'react';
+import Num from '../../../../components/Number';
 import Select from '../../../../components/Select';
 import Switch from '../../../../components/Switch';
+import Tabs from '../../../../components/Tabs';
 import Count from '../../../../lib/Count.js';
 import './style.css';
 
 let params = [
-  new Param('Select', 'Soft 17', 'Hits', 'Stands'),
-  new Param('Select', 'Blackjack', '3:2', '6:5'),
-  new Param('Select', 'Surrender', 'None', 'Early', 'Late'),
-  new Param('Select', 'Max Hands', 'Unlimited', 'Four', 'Two'),
-  new Param('Select', 'Resplit', 'Allowed', 'No Aces', 'Never'),
-  new Param('Select', 'Doubling', '2 Cards', 'Anytime'),
-  new Param('Select', 'Min Double', 'None', '8', '9', '10', '11'),
-  new Param('Switch', 'Peek Aces and Tens', true),
-  new Param('Switch', 'One Card After Ace Split', true),
-  new Param('Switch', 'Double After Split', true),
+  [
+    new Param('Select', 'Soft 17', 'Hits', 'Stands'),
+    new Param('Select', 'Blackjack', '3:2', '6:5'),
+    new Param('Select', 'Surrender', 'None', 'Early', 'Late'),
+    new Param('Select', 'Max Hands', 'Unlimited', 'Four', 'Two'),
+    new Param('Select', 'Resplit', 'Allowed', 'No Aces', 'Never'),
+    new Param('Select', 'Doubling', '2 Cards', 'Anytime'),
+    new Param('Select', 'Min Double', 'None', '8', '9', '10', '11'),
+    new Param('Switch', 'Peek Aces and Tens', true),
+    new Param('Switch', 'One Card After Ace Split', true),
+    new Param('Switch', 'Double After Split', true),
+  ],
+  [
+    new Param('Select', 'System', 'None', 'HiLo'),
+    new Param('Number', 'True Count', 0, 40, false),
+    new Param('Number', 'Decks', 6, 20, true),
+  ]
 ];
 // Two max hands and no resplitting are equivalent
 getParam('Max Hands').on('Two', () => {
@@ -56,8 +65,16 @@ getParam('Surrender').on('Late', () => {
     getParam('Peek Aces and Tens').set(true, true);
   }
 });
+//
+getParam('System').on('None', () => {
+  getParam('True Count').setVisibility(false);
+});
+getParam('System').on('HiLo', () => {
+  getParam('True Count').setVisibility(true);
+});
 
 function Param(type, label, ...options) {
+  let visible = true;
   let elem;
   let listeners = [];
 
@@ -67,6 +84,8 @@ function Param(type, label, ...options) {
 
   if(type === 'Switch') {
     this.options = [options[0], !options[0]];
+  } else if(type === 'Number' && options[2] === false) {
+    visible = false;
   }
 
   this.value = this.options[0];
@@ -74,10 +93,9 @@ function Param(type, label, ...options) {
   this.onChange = (updateEngine, i, skipListeners) => {
     if(type === 'Select') {
       this.value = this.options[i];
-    } else if(type === 'Switch') {
+    } else if(type === 'Switch' || type === 'Number') {
       this.value = i;
     }
-
     if(skipListeners !== true) {
       for(let l of listeners) {
         if(
@@ -89,7 +107,9 @@ function Param(type, label, ...options) {
       }
     }
 
-    update(updateEngine);
+    if(updateEngine) {
+      update(updateEngine);
+    }
   }
 
   this.on = (value, f) => {
@@ -105,7 +125,14 @@ function Param(type, label, ...options) {
     }
   }
 
+  this.setVisibility = (v) => {
+    visible = v;
+  }
+
   this.render = (key, updateEngine) => {
+    if(visible === false) {
+      return null;
+    }
     if(type === 'Select') {
       elem = <Select
         key={key}
@@ -113,6 +140,7 @@ function Param(type, label, ...options) {
         options={this.options}
         onChange={this.onChange.bind(null, updateEngine)}
         setChangeFunction={setChangeFunction}
+        value={this.options.indexOf(this.value)}
       />;
     } else if(type === 'Switch') {
       elem = <Switch
@@ -121,6 +149,19 @@ function Param(type, label, ...options) {
         enabled={this.value}
         onChange={this.onChange.bind(null, updateEngine)}
         setChangeFunction={setChangeFunction}
+      />;
+    } else if(type === 'Number') {
+      let max;
+      if(this.options[1]) {
+        max = this.options[1];
+      }
+      elem = <Num
+        key={key}
+        label={this.label}
+        onChange={this.onChange.bind(null, updateEngine)}
+        setChangeFunction={setChangeFunction}
+        value={this.value}
+        max={max}
       />;
     } else {
       elem = null;
@@ -136,8 +177,10 @@ function Param(type, label, ...options) {
 
 function getParam(label) {
   for(let i = 0; i < params.length; i++) {
-    if(params[i].label === label) {
-      return params[i];
+    for(let j = 0; j < params[i].length; j++) {
+      if(params[i][j].label === label) {
+        return params[i][j];
+      }
     }
   }
   return null;
@@ -158,9 +201,17 @@ function update(f) {
   } else {
     minDouble = Number(minDouble);
   }
+  let decks = Number(getParam('Decks').value);
+  if(isNaN(decks) || decks <= 0) decks = 1;
+  let count;
+  if(getParam('System').value === 'None') {
+    count = new Count('none', 0, decks);
+  } else if(getParam('System').value === 'HiLo') {
+    count = new Count('hilo', getParam('True Count').value, decks);
+  }
   f({
     blackjack: getParam('Blackjack').value === '3:2' ? 3/2 : 6/5,
-    count: new Count('hilo', 0, 6),
+    count,
     peek: getParam('Peek Aces and Tens').value,
     soft17: getParam('Soft 17').value === 'Hits',
     surrender: getParam('Surrender').value.toLocaleLowerCase(),
@@ -186,12 +237,12 @@ class Parameters extends React.Component {
   }
 
   render() {
-    // TODO: Double after split switch
-    // TODO: Deck text input
     return <div id='parameters' className='section'>
-      {params.map((param, i) => {
-        return param.render(i, this.props.updateEngine);
-      })}
+      <Tabs names={['Rules', 'Count']} renderTab={(tab) => {
+        return params[tab].map((param, i) => {
+          return param.render(i, this.props.updateEngine);
+        })
+      }}/>
     </div>;
   }
 }
