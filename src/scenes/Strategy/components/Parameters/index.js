@@ -20,8 +20,9 @@ let params = [
     new Param('Switch', 'Double After Split', true),
   ],
   [
-    new Param('Select', 'System', 'None', 'HiLo'),
+    new Param('Select', 'System', 'None', 'HiLo', 'KO', 'Omega II', 'Wong Halves', 'Uston APC'),
     new Param('Number', 'True Count', 0, 40, false),
+    new Param('Number', 'Count', 0, 120, false),
     new Param('Number', 'Decks', 6, 20, true),
   ]
 ];
@@ -65,13 +66,31 @@ getParam('Surrender').on('Late', () => {
     getParam('Peek Aces and Tens').set(true, true);
   }
 });
-//
 getParam('System').on('None', () => {
   getParam('True Count').setVisibility(false);
+  getParam('Count').setVisibility(false);
 });
 getParam('System').on('HiLo', () => {
   getParam('True Count').setVisibility(true);
+  getParam('Count').setVisibility(false);
 });
+getParam('System').on('KO', () => {
+  getParam('True Count').setVisibility(false);
+  getParam('Count').setVisibility(true);
+});
+getParam('System').on('Omega II', () => {
+  getParam('True Count').setVisibility(true);
+  getParam('Count').setVisibility(false);
+});
+getParam('System').on('Wong Halves', () => {
+  getParam('True Count').setVisibility(true);
+  getParam('Count').setVisibility(false);
+});
+getParam('System').on('Uston APC', () => {
+  getParam('True Count').setVisibility(true);
+  getParam('Count').setVisibility(false);
+});
+
 
 function Param(type, label, ...options) {
   let visible = true;
@@ -208,6 +227,14 @@ function update(f) {
     count = new Count('none', 0, decks);
   } else if(getParam('System').value === 'HiLo') {
     count = new Count('hilo', getParam('True Count').value, decks);
+  } else if(getParam('System').value === 'KO') {
+    count = new Count('ko', Number(getParam('Count').value / decks), decks);
+  } else if(getParam('System').value === 'Omega II') {
+    count = new Count('omega2', getParam('True Count').value, decks);
+  } else if(getParam('System').value === 'Wong Halves') {
+    count = new Count('wonghalves', getParam('True Count').value, decks);
+  } else if(getParam('System').value === 'Uston APC') {
+    count = new Count('ustonapc', getParam('True Count').value, decks);
   }
   f({
     blackjack: getParam('Blackjack').value === '3:2' ? 3/2 : 6/5,

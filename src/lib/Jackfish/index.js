@@ -133,7 +133,7 @@ function Jackfish(params) {
     return bestMove(player, dealer, split);
   };
   this.takeInsurance = () => {
-    if(params.count.system === 'hilo') {
+    if(params.count.system === 'hilo' || params.count.system === 'wonghalves') {
       /*
        * In systems where Aces and Tens are counted the same,
        * There's one more ten and one less ace than we think there is
@@ -596,6 +596,14 @@ function Jackfish(params) {
         return baseComp;
       case 'hilo':
         return hiloComp(count);
+      case 'ko':
+        return koComp(count);
+      case 'omega2':
+        return omega2Comp(count);
+      case 'wonghalves':
+        return wongHalvesComp(count);
+      case 'ustonapc':
+        return ustonAPCComp(count);
       default:
         return baseComp;
     }
@@ -614,10 +622,110 @@ function Jackfish(params) {
         comp.push(TEN_ODDS + TEN_HIGH_RATIO * count.tc / 104);
       } else if(i <= 4) {
         // 2-6
-        comp.push(CARD_ODDS - count.tc / 520);
+        comp.push(CARD_ODDS - count.tc / 104 / 5);
       } else {
         // 7-9
         comp.push(CARD_ODDS);
+      }
+    });
+    return comp;
+  }
+
+  function koComp(count) {
+    const TEN_HIGH_RATIO = 1 - ACE_HIGH_RATIO;
+
+    let comp = [];
+    loop(0, 10, i => {
+      if(i === 9) {
+        // Ace
+        comp.push(1.1 * CARD_ODDS + ACE_HIGH_RATIO * count.tc / 104);
+      } else if(i === 8) {
+        // 10
+        comp.push(1.1 * TEN_ODDS + TEN_HIGH_RATIO * count.tc / 104);
+      } else if(i <= 5) {
+        // 2-7
+        comp.push(5.5/6 * CARD_ODDS - count.tc / 104 / 6);
+      } else {
+        // 8-9
+        comp.push(CARD_ODDS);
+      }
+    });
+    return comp;
+  }
+
+  function omega2Comp(count) {
+    let comp = [];
+    loop(0, 10, i => {
+      if(i === 8) {
+        // 10
+        comp.push(TEN_ODDS + TEN_ODDS / (TEN_ODDS + CARD_ODDS/2) * count.tc / 104 / 2);
+      } else if(i === 7) {
+        // 9
+        comp.push(CARD_ODDS + 1/9 * count.tc / 104);
+      } else if(i <= 1 || i === 5) {
+        // 2, 3, 7
+        comp.push(CARD_ODDS - 1/9 * count.tc / 104);
+      } else if(i <= 4) {
+        // 4, 5, 6
+        comp.push(CARD_ODDS - 1/9 * count.tc / 104);
+      } else {
+        // 8, Ace
+        comp.push(CARD_ODDS);
+      }
+    });
+    return comp;
+  }
+
+  function wongHalvesComp(count) {
+    let comp = [];
+    loop(0, 10, i => {
+      if(i === 9) {
+        // Ace
+        comp.push(CARD_ODDS + 1/5.5 * count.tc / 104);
+      } else if(i === 8) {
+        // 10
+        comp.push(TEN_ODDS + TEN_ODDS / (TEN_ODDS + 1.5*CARD_ODDS) * count.tc / 104);
+      } else if(i === 7) {
+        // 9
+        comp.push(CARD_ODDS + 1/5.5 * count.tc / 104);
+      } else if(i === 0 || i === 5) {
+        // 2, 7
+        comp.push(CARD_ODDS - 1/5.5 * count.tc / 104);
+      } else if(i === 1 || i === 2 || i === 4) {
+        // 3, 4, 6
+        comp.push(CARD_ODDS - 1/5.5 * count.tc / 104);
+      } else if(i === 3) {
+        // 5
+        comp.push(CARD_ODDS - 1/5.5 * count.tc / 104);
+      } else {
+        // 8
+        comp.push(CARD_ODDS);
+      }
+    });
+    return comp;
+  }
+
+  function ustonAPCComp(count) {
+    let comp = [];
+    loop(0, 10, i => {
+      if(i === 8) {
+        // 10
+        comp.push(TEN_ODDS + TEN_ODDS / (TEN_ODDS + CARD_ODDS/3) * count.tc / 104 / 3);
+      } else if(i === 7) {
+        // 9
+        comp.push(CARD_ODDS + 1/13 * count.tc / 104);
+      } else if(i === 0 || i === 6) {
+        // 2, 8
+        comp.push(CARD_ODDS - 1/13 * count.tc / 104);
+      } else if(i === 3) {
+        // 5
+        comp.push(CARD_ODDS - 1/13 * count.tc / 104 );
+      } else if(i === 9) {
+        // Ace
+        comp.push(CARD_ODDS);
+      } else {
+        // 3, 4, 6, 7
+        comp.push(CARD_ODDS - 1/13 * count.tc / 104 );
       }
     });
     return comp;
