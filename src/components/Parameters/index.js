@@ -1,9 +1,9 @@
 import React from 'react';
-import Num from '../../../../components/Number';
-import Select from '../../../../components/Select';
-import Switch from '../../../../components/Switch';
-import Tabs from '../../../../components/Tabs';
-import Count from '../../../../lib/Count.js';
+import Num from '../Number';
+import Select from '../Select';
+import Switch from '../Switch';
+import Tabs from '../Tabs';
+import Count from '../../lib/Count.js';
 import './style.css';
 
 let params = [
@@ -260,7 +260,6 @@ class Parameters extends React.Component {
   constructor(props) {
     super(props);
     update(props.updateEngine);
-    props.onLoad();
   }
 
   render() {

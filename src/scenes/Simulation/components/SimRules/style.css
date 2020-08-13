@@ -1,0 +1,29 @@
+#simRules {
+  width: 20%;
+  height: auto;
+}
+
+#simRules .number {
+  display: inline-block;
+}
+#simRules .number > input {
+  width: 50px;
+}
+
+#addRule {
+  width: 100%;
+  font-size: 32px;
+}
+
+.rule {
+  padding: 10px;
+}
+
+.rule > .delete {
+  font-size: 24px;
+  position: absolute;
+  right: 10px;
+}
+.rule > .delete:hover {
+  cursor: pointer;
+}

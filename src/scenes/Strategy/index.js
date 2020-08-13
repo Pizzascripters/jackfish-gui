@@ -1,6 +1,6 @@
 import React from 'react';
 import Jackfish from '../../lib/Jackfish';
-import Parameters from './components/Parameters';
+import Parameters from '../../components/Parameters';
 import Table from './components/Table';
 import Analysis from './components/Analysis';
 import './style.css';
@@ -38,7 +38,6 @@ class Strategy extends React.Component {
     return <div id='strategy'>
       <Parameters
         updateEngine={this.updateEngine.bind(this)}
-        onLoad={this.doTable.bind(this)}
       />
       <Table
         jackfish={this.state.jackfish}

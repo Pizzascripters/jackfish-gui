@@ -98,10 +98,9 @@ function BoxHeader(props) {
 
 function BestMove(props) {
   let jackfish = props.jackfish;
-  let player = props.selection[0] & 0x3f;
+  let player = props.selection[0];
   let dealer = props.selection[1];
-  let pair = props.selection[0] & 0x40;
-  let move = jackfish.getTable(player, dealer, pair);
+  let move = jackfish.getTable(player, dealer);
   let action = (move.surrender ? 'R' : '') + move.action;
   return <div className='bestmove'>{ACTION_NAMES[action]}</div>;
 }

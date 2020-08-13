@@ -4,7 +4,9 @@ import './style.css';
 class Num extends React.Component {
   constructor(props) {
     super(props);
-    this.props.setChangeFunction(this.onChange.bind(this));
+    if(this.props.setChangeFunction) {
+      this.props.setChangeFunction(this.onChange.bind(this));
+    }
     this.state = {value: props.value, valid: true};
   }
 
@@ -23,8 +25,12 @@ class Num extends React.Component {
   }
 
   render() {
+    let label = null;
+    if(this.props.label) {
+      label = <span>{this.props.label}<br /></span>;
+    }
     return <div className='number'>
-      {this.props.label}<br />
+      {label}
       <input
         className={this.state.valid ? 'valid' : 'invalid'}
         type='text'
