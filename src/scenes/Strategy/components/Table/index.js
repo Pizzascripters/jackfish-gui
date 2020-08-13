@@ -89,8 +89,15 @@ function Divider(props) {
 
 class Table extends React.Component  {
   constructor(props) {
-    super(props)
-    this.state = {selection: null}
+    super(props);
+    props.jackfish.addListener(() => {
+      if(this.mounted) this.forceUpdate();
+    });
+    this.state = {selection: null};
+  }
+
+  componentDidMount() {
+    this.mounted = true;
   }
 
   onClick(e) {
@@ -111,25 +118,29 @@ class Table extends React.Component  {
   }
 
   render() {
-    return <div className='table' onClick={this.onClick.bind(this)}>
-      <TableHead />
-      {PLAYER_HANDS.map((group, i) => {
-        if(!window.k) window.k = 0; // Iterator for keys
-        let rows = group.map((hand, j) => {
-          return <Row
-            key={window.k++}
-            jackfish={this.props.jackfish}
-            onSelect={this.onSelect.bind(this)}
-            selection={this.state.selection}
-            player={hand}
-          />
-        });
-        if(i < PLAYER_HANDS.length - 1) {
-          rows.push(<Divider key={window.k++} />);
-        }
-        return rows;
-      })}
-    </div>;
+    if(this.props.jackfish.isLoaded()) {
+      return <div className='table' onClick={this.onClick.bind(this)}>
+        <TableHead />
+        {PLAYER_HANDS.map((group, i) => {
+          if(!window.k) window.k = 0; // Iterator for keys
+          let rows = group.map((hand, j) => {
+            return <Row
+              key={window.k++}
+              jackfish={this.props.jackfish}
+              onSelect={this.onSelect.bind(this)}
+              selection={this.state.selection}
+              player={hand}
+            />
+          });
+          if(i < PLAYER_HANDS.length - 1) {
+            rows.push(<Divider key={window.k++} />);
+          }
+          return rows;
+        })}
+      </div>;
+    } else {
+      return <div className='table'></div>;
+    }
   }
 }
 

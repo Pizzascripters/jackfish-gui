@@ -267,7 +267,10 @@ class Parameters extends React.Component {
     return <div id='parameters' className='section'>
       <Tabs names={['Rules', 'Count']} renderTab={(tab) => {
         return params[tab].map((param, i) => {
-          return param.render(i, this.props.updateEngine);
+          return param.render(i, (params) => {
+            this.props.updateEngine(params);
+            this.forceUpdate();
+          });
         })
       }}/>
     </div>;

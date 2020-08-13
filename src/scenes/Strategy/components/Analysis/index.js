@@ -17,20 +17,39 @@ const ACTION_NAMES = Object.assign(actionNames, {
   'RP': <span>{actionNames['R']}, otherwise {actionNames['P']}</span>,
 });
 
-function Analysis(props) {
-  if(props.selection) {
-    return <div id='analysis' className='section'>
-      <BoxHeader selection={props.selection}/>
-      <BestMove jackfish={props.jackfish} selection={props.selection} />
-      <Dealer jackfish={props.jackfish} selection={props.selection} />
-      <Actions jackfish={props.jackfish} selection={props.selection} surrender={props.jackfish.getParams().surrender} />
-    </div>;
-  } else {
-    return <div id='analysis' className='section'>
-      <MainHeader jackfish={props.jackfish} />
-      <Insurance jackfish={props.jackfish} />
-      <Edge jackfish={props.jackfish} />
-    </div>;
+class Analysis extends React.Component {
+  constructor(props) {
+    super(props);
+    props.jackfish.addListener(() => {
+      if(this.mounted) this.forceUpdate();
+    });
+  }
+
+  componentDidMount() {
+    this.mounted = true;
+  }
+
+  render() {
+    if(this.props.jackfish.isLoaded()) {
+      let props = this.props;
+      if(props.selection) {
+        return <div id='analysis' className='section'>
+          <BoxHeader selection={props.selection}/>
+          <BestMove jackfish={props.jackfish} selection={props.selection} />
+          <Dealer jackfish={props.jackfish} selection={props.selection} />
+          <Actions jackfish={props.jackfish} selection={props.selection} surrender={props.jackfish.getParams().surrender} />
+        </div>;
+      } else {
+        return <div id='analysis' className='section'>
+          <MainHeader jackfish={props.jackfish} />
+          <Insurance jackfish={props.jackfish} />
+          <Edge jackfish={props.jackfish} />
+        </div>;
+      }
+    } else {
+      return <div id='analysis' className='section'></div>
+    }
+
   }
 }
 
@@ -82,7 +101,7 @@ function BestMove(props) {
   let player = props.selection[0] & 0x3f;
   let dealer = props.selection[1];
   let pair = props.selection[0] & 0x40;
-  let move = jackfish.bestMove(player, dealer, pair);
+  let move = jackfish.getTable(player, dealer, pair);
   let action = (move.surrender ? 'R' : '') + move.action;
   return <div className='bestmove'>{ACTION_NAMES[action]}</div>;
 }
