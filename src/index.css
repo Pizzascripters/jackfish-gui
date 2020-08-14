@@ -17,9 +17,30 @@ body {
   height: 100vh;
 }
 
-#root-container, #root-container > div {
+header {
+  display: flex;
+  justify-content: space-around;
+  height: 50px;
+  background-color: #222;
+  margin-bottom: 10px;
+}
+
+a {
+  text-decoration: underline;
+}
+a:hover {
+  cursor: pointer;
+}
+
+#root-container, #container {
   width: 100%;
   height: 100%;
+}
+#root-container > #container > div {
+  height: auto;
+}
+
+#container > div {
   display: flex;
 }
 
