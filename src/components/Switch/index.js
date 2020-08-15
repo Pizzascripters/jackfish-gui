@@ -4,7 +4,9 @@ import './style.css';
 class Switch extends React.Component {
   constructor(props) {
     super(props);
-    this.props.setChangeFunction(this.setEnabled.bind(this));
+    if(this.props.setChangeFunction) {
+      this.props.setChangeFunction(this.setEnabled.bind(this));
+    }
     this.handleClick = this.handleClick.bind(this);
     this.state = {enabled: props.enabled};
   }
@@ -13,7 +15,9 @@ class Switch extends React.Component {
     this.setState({
       enabled: !this.state.enabled
     });
-    this.props.onChange(!this.state.enabled); // React hasn't set the state yet
+    if(this.props.onChange) {
+      this.props.onChange(!this.state.enabled); // React hasn't set the state yet
+    }
   }
 
   setEnabled(enabled) {
@@ -23,8 +27,10 @@ class Switch extends React.Component {
 
   render() {
     let active = this.state.enabled ? ' active' : '';
-    return <div className='switch' onMouseDown={this.handleClick}>
-      {this.props.label}<br />
+    let large = this.props.large ? ' largeSwitch' : '';
+    let label = this.props.label ? <span>{this.props.label}<br /></span> : null;
+    return <div className={'switch' + large} onMouseDown={this.handleClick}>
+      {label}
       <div className={'switchBg' + active}></div>
       <div className={'switchSlider' + active}></div>
     </div>;

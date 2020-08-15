@@ -5,14 +5,19 @@
 
 #simRules .number {
   display: inline-block;
+  margin-bottom: 0px;
 }
-#simRules .number > input {
+.rule .number > input {
   width: 50px;
 }
 
 #addRule {
   width: 100%;
   font-size: 32px;
+}
+
+#simRules > .tabs > .tabsBody {
+  padding: 0px;
 }
 
 .rule {
@@ -26,4 +31,8 @@
 }
 .rule > .delete:hover {
   cursor: pointer;
+}
+
+.ending {
+  padding: 10px;
 }

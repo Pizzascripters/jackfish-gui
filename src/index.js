@@ -7,7 +7,7 @@ import Simulation from './scenes/Simulation';
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { page: 'strategy' };
+    this.state = { page: 'simulation' };
   }
 
   onClick(page) {
@@ -23,11 +23,14 @@ class App extends React.Component {
       case 'simulation':
         content = <Simulation />;
         break;
+      default:
+        content = null;
+        break;
     }
     return <div id='container'>
       <header>
-        <a onClick={this.onClick.bind(this, 'strategy')}>Strategy</a>
-        <a onClick={this.onClick.bind(this, 'simulation')}>Simulation</a>
+        <p className='link' onClick={this.onClick.bind(this, 'strategy')}>Strategy</p>
+        <p className='link' onClick={this.onClick.bind(this, 'simulation')}>Simulation</p>
       </header>
       {content}
     </div>;

@@ -1,0 +1,33 @@
+.graphContainer {
+  margin: 20px;
+  width: 480px;
+  height: 270px;
+  padding-bottom: 20px;
+}
+
+.graph {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  border-bottom: 2px solid white;
+  border-left: 2px solid white;
+}
+
+.graphContainer > .labels {
+  display: flex;
+  justify-content: space-around;
+}
+
+.graphContainer > .labels span {
+  font-style: italic;
+  font-size: 12px;
+}
+
+.graph > .column {
+  margin: 5px;
+  margin-bottom: 0px;
+  margin-top: auto;
+  flex: 1;
+
+  background-color: #0cc;
+}

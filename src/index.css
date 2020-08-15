@@ -25,10 +25,10 @@ header {
   margin-bottom: 10px;
 }
 
-a {
+.link {
   text-decoration: underline;
 }
-a:hover {
+.link:hover {
   cursor: pointer;
 }
 

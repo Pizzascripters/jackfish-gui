@@ -21,7 +21,9 @@ class Simulation extends React.Component {
       <Parameters
         updateEngine={this.updateEngine.bind(this)}
       />
-      <SimOutcome />
+      <SimOutcome
+        jackfish={this.state.jackfish}
+      />
       <SimRules />
     </div>
   }
