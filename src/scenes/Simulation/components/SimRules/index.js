@@ -6,16 +6,21 @@ import './style.css';
 class SimRules extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {rules: [], bet: 10};
+    this.state = {
+      rules: [],
+      bet: 10,
+      cash: Infinity,
+      maxHands: Infinity,
+      maxShoes: Infinity,
+      maxCash: Infinity,
+      yellow: 0
+    };
   }
 
   addRule() {
     let rule = {
       value: 0,
-      bet: 10,
-      cash: Infinity,
-      maxHands: Infinity,
-      maxCash: Infinity
+      bet: 10
     };
     rule.onChange = this.onChangeRule.bind(this, rule);
     this.state.rules.splice(0, 0, rule);
@@ -27,6 +32,7 @@ class SimRules extends React.Component {
   onChangeRule(rule, newValue, newBet) {
     rule.value = newValue;
     rule.bet = newBet;
+    this.setState({});
   }
 
   destruct(key) {
@@ -52,8 +58,24 @@ class SimRules extends React.Component {
     this.setState({ maxHands });
   }
 
+  onChangeMaxShoes(maxShoes) {
+    this.setState({ maxShoes });
+  }
+
   onChangeMaxCash(maxCash) {
     this.setState({ maxCash });
+  }
+
+  onChangeYellow(yellow) {
+    this.setState({ yellow });
+  }
+
+  componentDidMount() {
+    this.props.onUpdate(this.state);
+  }
+
+  componentDidUpdate() {
+    this.props.onUpdate(this.state);
   }
 
   render() {
@@ -92,12 +114,28 @@ class SimRules extends React.Component {
 
   renderEnding() {
     return <div className='ending'>
-      Starting Cash: $<Num onChange={this.onChangeCash.bind(this)} value={this.state.cash} /><br />
+      Starting Cash: $<Num
+        onChange={this.onChangeCash.bind(this)}
+        value={this.state.cash}
+        emptyValue={Infinity} /><br />
       <span className='tiny'>Empty for unlimited</span><br /><br />
-      Max Hands: <Num onChange={this.onChangeMaxHands.bind(this)} value={this.state.maxHands} /><br />
-      <span className='tiny'>Empty for unlimited</span><br /><br />
-      Max Cash: $<Num onChange={this.onChangeMaxCash.bind(this)} value={this.state.maxCash} /><br />
-      <span className='tiny'>Empty for unlimited</span>
+      Max Hands: <Num
+        onChange={this.onChangeMaxHands.bind(this)}
+        value={this.state.maxHands}
+        emptyValue={Infinity} /><br /><br />
+      Max Shoes: <Num
+        onChange={this.onChangeMaxShoes.bind(this)}
+        value={this.state.maxShoes}
+        emptyValue={Infinity} /><br /><br />
+      Max Cash: $<Num
+        onChange={this.onChangeMaxCash.bind(this)}
+        value={this.state.maxCash}
+        emptyValue={Infinity} /><br /><br />
+      Yellow Card Location: <Num
+        onChange={this.onChangeYellow.bind(this)}
+        value={this.state.yellow}
+        emptyValue={0} /><br />
+      <span className='tiny'>In number of decks. Empty for no yellow card</span>
     </div>;
   }
 }

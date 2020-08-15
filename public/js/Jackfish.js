@@ -241,17 +241,22 @@ function Jackfish(cb, params) {
     }
   }
 
-  /*-- Monte Carlo Simulation --*/
-  function createSimulation(player, dealer, forceMove) {
-    let p = elemsToIndices(player);
-    let cards = Math.round(52 * params.count.decks);
-    let compCopy = [];
+  this.createSimulation = createSimulation;
 
-    return {
-      config: (p_, d) => {
-        p = elemsToIndices(p_);
-        dealer = d;
+  /*-- Monte Carlo Simulation --*/
+  function createSimulation(options) {
+    let sim = {
+      config: (options_) => {
+        options = options_;
+        if(options.player) {
+          p = elemsToIndices(player);
+        } else {
+          p = [];
+        }
+        cards = Math.round(52 * params.count.decks);
+        compCopy = [];
       },
+
       run: (n) => {
         let meanR = 0;
         let frequencies = {};
@@ -281,6 +286,10 @@ function Jackfish(cb, params) {
       }
     }
 
+    let p = [];
+    let compCopy = [];
+    sim.config(options);
+
     // Converts an array of elements of CARD_STATES to indices
     function elemsToIndices(p) {
       if(!p) return p;
@@ -290,6 +299,8 @@ function Jackfish(cb, params) {
       }
       return a;
     }
+
+    return sim;
   }
 
   // comp is a column vector representing the deck composition
@@ -1163,7 +1174,10 @@ self.addEventListener('message', e => {
     jackfish = new Jackfish(cb, args[0]);
     break;
   case 'createSimulation':
-    sim = jackfish.createSimulation(cb, args[0], args[1], args[2]);
+    sim = jackfish.createSimulation(args[0]);
+    break;
+  case 'updateSimulation':
+    sim.config(args[0]);
     break;
   case 'setParams':
     jackfish.setParams(cb, args[0]);

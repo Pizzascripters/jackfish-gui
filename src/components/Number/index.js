@@ -12,7 +12,10 @@ class Num extends React.Component {
 
   onChange(e) {
     let value = Number(e.target.value);
-    if(!isNaN(value) && (!this.props.max || Math.abs(value) <= this.props.max)) {
+    if(this.props.emptyValue !== undefined && e.target.value.length === 0) {
+      this.setState({ value: this.props.emptyValue, valid: true });
+      this.props.onChange(this.props.emptyValue, false);
+    } else if(!isNaN(value) && (!this.props.max || Math.abs(value) <= this.props.max)) {
       if(this.state.value !== value) {
         this.setState({ value, valid: true });
         this.props.onChange(value, false);
@@ -29,13 +32,17 @@ class Num extends React.Component {
     if(this.props.label) {
       label = <span>{this.props.label}<br /></span>;
     }
+    let value = this.props.value;
+    if(value === this.props.emptyValue) {
+      value = '';
+    }
     return <div className='number'>
       {label}
       <input
         className={this.state.valid ? 'valid' : 'invalid'}
         type='text'
         onChange={this.onChange.bind(this)}
-        defaultValue={this.props.value} />
+        defaultValue={value} />
     </div>;
   }
 }

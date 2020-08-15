@@ -60,6 +60,12 @@ function Jackfish(params) {
     params = params_;
   }
   this.takeInsurance = () => insurance;
+  this.createSimulation = (options) => {
+    worker.postMessage(['createSimulation', [options]]);
+  }
+  this.updateSimulation = (options) => {
+    worker.postMessage(['updateSimulation', [options]]);
+  }
   this.addListener = (f) => {
     listeners.push(f);
   }
@@ -86,7 +92,8 @@ function Jackfish(params) {
   let hitM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
   let splitM = zeroes([DEALER_STATES.length, DEALER_STATES.length]);
 
-  // Worker for computationally heavy tasks
+  /*-- Worker --*/
+  // for computationally heavy tasks
   let worker = new Worker('js/Jackfish.js');
   worker.postMessage(['Constructor', [params]]);
   worker.addEventListener('message', e => {
@@ -111,7 +118,7 @@ function Jackfish(params) {
         listener();
       }
     }
-  })
+  });
 
   /*-- Table generation --*/
   function getTable(player, dealer) {

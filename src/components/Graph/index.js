@@ -18,7 +18,7 @@ class Graph extends React.Component {
           return <div key={i} className='column' style={style}></div>;
         })}
       </div>
-      <div class='labels'>
+      <div className='labels'>
         {this.state.data.map((column, i) => {
           return <span key={i}>{column[0]}</span>;
         })}
