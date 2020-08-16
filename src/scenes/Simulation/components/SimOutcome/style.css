@@ -19,3 +19,14 @@
   margin-left: auto;
   margin-right: auto;
 }
+
+#simOutcome #handsPlayed {
+  font-size: 24px;
+  text-align: center;
+}
+
+#simOutcome #playerEdge {
+  font-size: 32px;
+  font-style: bold;
+  text-align: center;
+}

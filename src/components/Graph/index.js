@@ -17,7 +17,7 @@ class Graph extends React.Component {
     let max;
     let data = this.props.data;
     if(data.length > 0) {
-      max = data.reduce((acc, x) => acc > x[1] ? acc : x[1]);
+      max = data.reduce((acc, x) => acc[1] > x[1] ? acc : x)[1];
     } else {
       max = 1;
       data = DEFAULT_DATA;

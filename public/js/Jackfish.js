@@ -245,7 +245,7 @@ function Jackfish(cb, params) {
   /*-- Monte Carlo Simulation --*/
   function createSimulation(options) {
     let cash, hands, shoes,
-        frequencies, mean,
+        totalHands, frequencies, endRecord, mean,
         p, compCopy;
     let running = false,
         sessions = 0;
@@ -277,11 +277,13 @@ function Jackfish(cb, params) {
           let r = playHand(compCopy, cards, {
             dealer,
             player: p,
-            forceMove : options.forceMove
+            forceMove: options.forceMove,
+            shuffledComp: comp
           });
           hands++;
+          totalHands++;
           cash += r * options.bet;
-          mean = mean * hands / (hands + 1) + r / hands;
+          mean = mean * totalHands / (totalHands + 1) + r / totalHands;
           if(!frequencies[r]) {
             frequencies[r] = 1;
           } else {
@@ -289,10 +291,25 @@ function Jackfish(cb, params) {
           }
           if(cards.cards / 52 < options.yellow) {
             // Recopying comp simulates shuffle
-            compCopy = copy(comp);
-            cards = {cards: Math.round(52 * params.count.decks)};
+            compCopy = shuffle(comp, cards);
             shoes++;
           }
+        }
+
+        let ending;
+        if(cash <= 0) {
+          ending = '$0';
+        } else if(cash >= options.maxCash && cash !== Infinity) {
+          ending = `$${options.maxCash}`;
+        } else if(hands >= options.maxHands) {
+          ending = `${options.maxHands} hands`;
+        } else if(shoes >= options.maxShoes) {
+          ending = `${options.maxShoes} shoes`;
+        }
+        if(ending && endRecord[ending]) {
+          endRecord[ending]++;
+        } else if(ending) {
+          endRecord[ending] = 1;
         }
 
         setTimeout(() => {
@@ -312,10 +329,10 @@ function Jackfish(cb, params) {
       get: () => {
         return {
           cash,
-          hands,
-          shoes,
           frequencies,
-          mean
+          endRecord,
+          mean,
+          totalHands
         }
       },
 
@@ -330,7 +347,9 @@ function Jackfish(cb, params) {
         hands = 0;
         shoes = 0;
         frequencies = {};
+        endRecord = {};
         mean = 0;
+        totalHands = 0;
       }
     }
 
@@ -372,15 +391,15 @@ function Jackfish(cb, params) {
 
     // Draw random dealer card if not specified
     if(options.dealer === undefined || options.dealer === -1) {
-      options.dealer = drawCard(comp, cards);
+      options.dealer = drawCard(comp, cards, options.shuffledComp);
     }
     dealer = DEALER_STATES[options.dealer];
 
     // Draw player cards
     let p = []; // List of player cards
     if(!options.player || options.player.length === 0) {
-      p[0] = drawCard(comp, cards);
-      p[1] = drawCard(comp, cards);
+      p[0] = drawCard(comp, cards, options.shuffledComp);
+      p[1] = drawCard(comp, cards, options.shuffledComp);
     } else {
       p[0] = options.player[0];
       p[1] = options.player[1];
@@ -432,7 +451,7 @@ function Jackfish(cb, params) {
       // Do said action
       if(action === 'P') {
         if(!options.fixDealer) {
-          dealer = simDealer(P, comp, cards, dealer);
+          dealer = simDealer(P, comp, cards, dealer, options.shuffledComp);
           if(insurance && dealer === BLACKJACK) {
             insurance = 1;
           } else if(insurance) {
@@ -444,24 +463,25 @@ function Jackfish(cb, params) {
         }
         // Fix dealer card because all splits happen on the same table
         let options_ = {
-          player: [p[0], drawCard(comp, cards)],
+          player: [p[0], drawCard(comp, cards, options.shuffledComp)],
           dealer: options.dealer,
           fixDealer: dealer,
-          noDouble: !params.split.double
+          noDouble: !params.split.double,
+          shuffledComp: options.shuffledComp
         };
         let r1 = playHand(comp, cards, options_);
-        options.player = [p[1], drawCard(comp, cards)]
+        options.player = [p[1], drawCard(comp, cards, options.shuffledComp)]
         let r2 = playHand(comp, cards, options_);
         if(r1 === params.blackjack) r1 = 1; // Blackjack after split isn't natural
         if(r2 === params.blackjack) r2 = 1;
         return r1 + r2 + insurance;
       } else if(action === 'D' || action === 'd') {
         double = true;
-        player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
+        player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards, options.shuffledComp)];
       } else {
         // Hit until table says not to
         while(action === 'H' || action === 'D') {
-          player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
+          player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards, options.shuffledComp)];
           if(player !== BUST) {
             action = getTable(player, dealer).action;
           } else {
@@ -469,14 +489,14 @@ function Jackfish(cb, params) {
           }
           if(params.double.anytime && (action === 'D' || action === 'd')) {
             double = true;
-            player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards)];
+            player = P[HAND_STATES.indexOf(player)][drawCard(comp, cards, options.shuffledComp)];
             break;
           }
         }
       }
     }
 
-    dealer = simDealer(P, comp, cards, dealer);
+    dealer = simDealer(P, comp, cards, dealer, options.shuffledComp);
     if(insurance && dealer === BLACKJACK) {
       insurance = 1;
     } else if(insurance) {
@@ -516,9 +536,13 @@ function Jackfish(cb, params) {
     }
   }
 
-  function drawCard(comp, cards) {
-    let c = pickFromArray(comp);
-    let newComp = pullCard(comp, c, cards.cards);
+  function drawCard(comp, cards, shuffledComp) {
+    let tempComp = comp;
+    if(shuffledComp && cards.cards <= 0) {
+      tempComp = shuffle(shuffledComp, cards);
+    }
+    let c = pickFromArray(tempComp);
+    let newComp = pullCard(tempComp, c, cards.cards);
     for(let i = 0; i < comp.length; i++) {
       comp[i] = newComp[i];
     }
@@ -527,9 +551,9 @@ function Jackfish(cb, params) {
   }
 
   // Run dealer until it hits an endstate or bust
-  function simDealer(P, comp, cards, dealer) {
+  function simDealer(P, comp, cards, dealer, shuffledComp) {
     while((dealer & 0x1f) < 17 || dealer === DEALER_TEN || dealer === DEALER_ACE || (params.soft17 && dealer === 49)) {
-      let nextCard = drawCard(comp, cards);
+      let nextCard = drawCard(comp, cards, shuffledComp);
       let oldDealer = dealer;
       dealer = P[HAND_STATES.indexOf(dealer)][nextCard];
     }
@@ -1046,6 +1070,11 @@ function Jackfish(cb, params) {
       soft = 0x20;
     }
     return [value, soft, pair];
+  }
+
+  function shuffle(comp, cards) {
+    cards.cards = Math.round(52 * params.count.decks);
+    return copy(comp);
   }
 
   /*-- General Utility Functions --*/

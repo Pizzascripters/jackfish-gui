@@ -1,6 +1,7 @@
 import React from 'react';
 import Switch from '../../../../components/Switch';
 import Graph from '../../../../components/Graph';
+import {formatPercent} from '../../../../lib/lib.js';
 import './style.css';
 
 class SimOutcome extends React.Component {
@@ -14,11 +15,18 @@ class SimOutcome extends React.Component {
         ['Win 1:1', 28],
         ['Win 3:2', 2],
         ['Win 2:1', 9]
-      ]
+      ],
+      endingData: [
+        ['$0', .33],
+        ['$500', .40],
+        ['100 hands', .27]
+      ],
+      edge: 0
     };
   }
 
   onUpdate(data) {
+    // Frequency graph data
     let uncutData = [];
     Object.keys(data.frequencies).forEach((key) => {
       key = Number(key);
@@ -71,8 +79,37 @@ class SimOutcome extends React.Component {
       return a[3] > b[3];
     });
 
+    // Ending graph data
+    let endingData = [];
+    Object.keys(data.endRecord).forEach((key) => {
+      let color;
+      if(key === '$0') {
+        color = '#c11';
+      } else if(key.startsWith('$')) {
+        color = '#1c1';
+      }
+      endingData.push([key, data.endRecord[key], color]);
+    });
+    endingData.sort((a, b) => {
+      if(a[0] === '$0') {
+        return false;
+      } else if(b[0] === '$0') {
+        return true;
+      } else if(a[0].startsWith('$')) {
+        return false;
+      } else if(b[0].startsWith('$')) {
+        return true;
+      } else if(a[0].endsWith('hands')) {
+        return false;
+      }
+      return false;
+    });
+
     this.setState({
-      graphData
+      graphData,
+      endingData,
+      edge: data.mean,
+      hands: data.totalHands
     });
   }
 
@@ -90,12 +127,7 @@ class SimOutcome extends React.Component {
 
   render() {
     let graphData = this.state.graphData;
-
-    let graphData2 = [
-      ['$0', .33],
-      ['$500', .40],
-      ['100 hands', .27]
-    ];
+    let endingData = this.state.endingData;
 
     return <div id='simOutcome'>
       <div id='simOutcomeHeader'>
@@ -103,7 +135,9 @@ class SimOutcome extends React.Component {
         <Switch enabled={false} large={true} onChange={this.onToggle.bind(this)} />
       </div>
       <Graph data={graphData}/>
-      <Graph data={graphData2}/>
+      <div id='handsPlayed'>{this.state.hands} hands played</div>
+      <div id='playerEdge'>{formatPercent(this.state.edge, true)}</div>
+      <Graph data={endingData}/>
     </div>
   }
 }
