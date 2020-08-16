@@ -66,6 +66,18 @@ function Jackfish(params) {
   this.updateSimulation = (options) => {
     worker.postMessage(['updateSimulation', [options]]);
   }
+  this.runSimulation = (cb) => {
+    simCallback = cb;
+    worker.postMessage(['runSimulation', []]);
+  }
+  this.clearSimulation = (cb) => {
+    simCallback = cb;
+    worker.postMessage(['clearSimulation', []]);
+  }
+  this.stopSimulation = (cb) => {
+    simCallback = cb;
+    worker.postMessage(['stopSimulation', []]);
+  }
   this.addListener = (f) => {
     listeners.push(f);
   }
@@ -82,6 +94,7 @@ function Jackfish(params) {
   let endM, standM, doubleM;
   let table;
   let edge, insurance;
+  let simCallback;
   let loaded = false;
   let listeners = [];
 
@@ -117,10 +130,11 @@ function Jackfish(params) {
       for(let listener of listeners) {
         listener();
       }
+    } else if(e.data[0].endsWith('Simulation')) {
+      if(simCallback) simCallback(e.data[1]);
     }
   });
 
-  /*-- Table generation --*/
   function getTable(player, dealer) {
     if(player && dealer) {
       if(dealer === 'A' || dealer === ACE) dealer = DEALER_ACE;

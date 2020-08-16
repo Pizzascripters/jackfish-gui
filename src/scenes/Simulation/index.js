@@ -17,7 +17,7 @@ class Simulation extends React.Component {
     jackfish.setParams(params);
   }
 
-  onUpdate(options) {
+  onUpdateRules(options) {
     for(let rule of options.rules) {
       delete rule.onChange;
     }
@@ -29,12 +29,6 @@ class Simulation extends React.Component {
     }
   }
 
-  onEnable() {
-    if(this.simCreated) {
-      this.sim.run();
-    }
-  }
-
   render() {
     return <div id='simulation'>
       <Parameters
@@ -42,10 +36,9 @@ class Simulation extends React.Component {
       />
       <SimOutcome
         jackfish={this.state.jackfish}
-        onEnable={this.onEnable.bind(this)}
       />
       <SimRules
-        onUpdate={this.onUpdate.bind(this)}
+        onUpdate={this.onUpdateRules.bind(this)}
       />
     </div>
   }

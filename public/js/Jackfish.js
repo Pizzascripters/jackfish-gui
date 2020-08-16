@@ -125,12 +125,11 @@ function Jackfish(cb, params) {
 
   this.setParams = (cb, p) => {
     params = p;
+    comp = deckComp(params.count);
     cb(params);
   }
 
   this.makeMatrices = (cb) => {
-    comp = deckComp(params.count);
-
     // Calculate dealer's odds to reach each endstate
     endM = endMatrix(comp, params.soft17, params.count.decks * 52);
 
@@ -245,49 +244,96 @@ function Jackfish(cb, params) {
 
   /*-- Monte Carlo Simulation --*/
   function createSimulation(options) {
+    let cash, hands, shoes,
+        frequencies, mean,
+        p, compCopy;
+    let running = false,
+        sessions = 0;
+
     let sim = {
       config: (options_) => {
         options = options_;
         if(options.player) {
           p = elemsToIndices(player);
         } else {
-          p = [];
+          p = false;
         }
-        cards = Math.round(52 * params.count.decks);
-        compCopy = [];
+        cash = options.cash;
+        cards = {cards: Math.round(52 * params.count.decks)};
+        compCopy = copy(comp);
+        sim.clear();
       },
 
-      run: (n) => {
-        let meanR = 0;
-        let frequencies = {};
-        if(player && !dealer) {
-          dealer = player;
-          player = undefined;
-        }
+      run: (cb) => {
+        running = true;
+        let dealer = options.dealer === undefined ? undefined : DEALER_STATES.indexOf(options.dealer);
 
-        for(let i = 0; i < n; i++) {
-          // Copy comp because playHand manipulates it
-          compCopy = copy(comp);
-          let r; // r * initial bet = money after hand
-          r = playHand(compCopy, cards, {
-            dealer: DEALER_STATES.indexOf(dealer),
+        while(
+          cash > 0 &&
+          hands < options.maxHands &&
+          shoes < options.maxShoes &&
+          (cash < options.maxCash || options.maxCash === Infinity)
+        ) {
+          let r = playHand(compCopy, cards, {
+            dealer,
             player: p,
-            forceMove : forceMove
+            forceMove : options.forceMove
           });
-          meanR += r / n;
+          hands++;
+          cash += r * options.bet;
+          mean = mean * hands / (hands + 1) + r / hands;
           if(!frequencies[r]) {
             frequencies[r] = 1;
           } else {
             frequencies[r]++;
           }
+          if(cards.cards / 52 < options.yellow) {
+            // Recopying comp simulates shuffle
+            compCopy = copy(comp);
+            cards = {cards: Math.round(52 * params.count.decks)};
+            shoes++;
+          }
         }
-        frequencies.mean = meanR;
-        return frequencies;
+
+        setTimeout(() => {
+          if(running) {
+            sessions++;
+            cb(sim.get());
+            sim.reset();
+            sim.run(cb);
+          }
+        }, 0);
+      },
+
+      stop: () => {
+        running = false;
+      },
+
+      get: () => {
+        return {
+          cash,
+          hands,
+          shoes,
+          frequencies,
+          mean
+        }
+      },
+
+      reset: () => {
+        cash = options.cash;
+        hands = 0;
+        shoes = 0;
+      },
+
+      clear: () => {
+        cash = options.cash;
+        hands = 0;
+        shoes = 0;
+        frequencies = {};
+        mean = 0;
       }
     }
 
-    let p = [];
-    let compCopy = [];
     sim.config(options);
 
     // Converts an array of elements of CARD_STATES to indices
@@ -311,9 +357,6 @@ function Jackfish(cb, params) {
   // options.forceMove dictates which move the player must play
   // options.noDouble
   function playHand(comp, cards, options) {
-    if(typeof cards === 'number') {
-      cards = { cards }; // Make it on object so we can reference it
-    }
     if(!options) {
       options = {};
     }
@@ -462,7 +505,7 @@ function Jackfish(cb, params) {
     if(pv > dv) {
       return double ? 2 : 1;
     } else if(pv === dv) {
-      return insurance;
+      return insurance ? insurance : 0;
     } else {
       if(params.peek) {
         // To account for peeking, we say doubling and losing is only -1 on dealer Blackjack
@@ -487,12 +530,23 @@ function Jackfish(cb, params) {
   function simDealer(P, comp, cards, dealer) {
     while((dealer & 0x1f) < 17 || dealer === DEALER_TEN || dealer === DEALER_ACE || (params.soft17 && dealer === 49)) {
       let nextCard = drawCard(comp, cards);
+      let oldDealer = dealer;
       dealer = P[HAND_STATES.indexOf(dealer)][nextCard];
     }
     return dealer;
   }
 
   /*-- Private functions --*/
+
+  function getTable(player, dealer) {
+    if(player && dealer) {
+      if(dealer === 'A' || dealer === ACE) dealer = DEALER_ACE;
+      if(dealer === 10) dealer = DEALER_TEN;
+      return table[TABLE_HANDS.indexOf(player)][DEALER_STATES.indexOf(dealer)];
+    } else {
+      return table;
+    }
+  }
 
   // P[state][card] = new state
   function progressionMatrix() {
@@ -1178,6 +1232,21 @@ self.addEventListener('message', e => {
     break;
   case 'updateSimulation':
     sim.config(args[0]);
+    break;
+  case 'runSimulation':
+    sim.run(cb);
+    cb(sim.get());
+    break;
+  case 'clearSimulation':
+    sim.clear();
+    cb(sim.get());
+    break;
+  case 'getSimulation':
+    cb(sim.get());
+    break;
+  case 'stopSimulation':
+    sim.stop();
+    cb(sim.get());
     break;
   case 'setParams':
     jackfish.setParams(cb, args[0]);

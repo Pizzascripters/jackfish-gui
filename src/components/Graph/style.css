@@ -15,10 +15,14 @@
 
 .graphContainer > .labels {
   display: flex;
-  justify-content: space-around;
+  justify-content: stretch;
+  align-items: stretch;
 }
 
 .graphContainer > .labels span {
+  flex: 1;
+  text-align: center;
+  display: inline-block;
   font-style: italic;
   font-size: 12px;
 }
