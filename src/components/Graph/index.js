@@ -1,4 +1,5 @@
 import React from 'react';
+import {formatPercent} from '../../lib/lib.js';
 import './style.css';
 
 const DEFAULT_DATA = [
@@ -13,13 +14,27 @@ class Graph extends React.Component {
     this.state = {data: []};
   }
 
+  onMouseEnter(key) {
+    let state = {};
+    state[key] = true;
+    this.setState(state);
+  }
+
+  onMouseLeave(key) {
+    let state = {};
+    state[key] = false;
+    this.setState(state);
+  }
+
   render() {
-    let max;
+    let max, total;
     let data = this.props.data;
     if(data.length > 0) {
       max = data.reduce((acc, x) => acc[1] > x[1] ? acc : x)[1];
+      total = data.reduce((acc, x) => [0, acc[1] + x[1]])[1];
     } else {
       max = 1;
+      total = 0;
       data = DEFAULT_DATA;
     }
     return <div className='graphContainer'>
@@ -31,7 +46,16 @@ class Graph extends React.Component {
           if(column[2]) {
             style.backgroundColor = column[2];
           }
-          return <div key={i} className='column' style={style}></div>;
+          return <div
+            key={i}
+            className='column'
+            style={style}
+            onMouseEnter={this.onMouseEnter.bind(this, i)}
+            onMouseLeave={this.onMouseLeave.bind(this, i)}
+          >{this.state[i] ? <div className='columnInfo'>
+            <span>{column[1]} hands</span><br />
+            <span>{formatPercent(column[1] / total)}</span>
+          </div> : null}</div>;
         })}
       </div>
       <div className='labels'>

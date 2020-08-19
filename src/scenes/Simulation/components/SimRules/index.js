@@ -9,10 +9,10 @@ class SimRules extends React.Component {
     this.state = {
       rules: [],
       bet: 10,
-      cash: 1000,
-      maxHands: Infinity,
+      cash: Infinity,
+      maxHands: 100,
       maxShoes: Infinity,
-      maxCash: 2000,
+      maxCash: Infinity,
       yellow: 1
     };
   }
