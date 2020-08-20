@@ -3,11 +3,12 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import Strategy from './scenes/Strategy';
 import Simulation from './scenes/Simulation';
+import Practice from './scenes/Practice';
 
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { page: 'simulation' };
+    this.state = { page: 'practice' };
   }
 
   onClick(page) {
@@ -23,12 +24,16 @@ class App extends React.Component {
       case 'simulation':
         content = <Simulation />;
         break;
+      case 'practice':
+        content = <Practice />;
+        break;
       default:
         content = null;
         break;
     }
     return <div id='container'>
       <header>
+        <p className='link' onClick={this.onClick.bind(this, 'practice')}>Practice</p>
         <p className='link' onClick={this.onClick.bind(this, 'strategy')}>Strategy</p>
         <p className='link' onClick={this.onClick.bind(this, 'simulation')}>Simulation</p>
       </header>
