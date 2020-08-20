@@ -142,7 +142,9 @@ function Jackfish(cb, params) {
 
   this.setParams = (cb, params_) => {
     params = params_;
-    params.count.indices = SYSTEM_NAMES[params.count.system];
+    if(params.count.system !== 'none') {
+      params.count.indices = SYSTEM_NAMES[params.count.system];
+    }
     comp = deckComp(params.count);
     this.comp = comp;
     cb(params);
@@ -192,7 +194,14 @@ function Jackfish(cb, params) {
 
     let cache = searchTableCache(params);
     if(cache) {
-      cb(table = cache);
+      rM = cache.rM;
+      rdM = cache.rdM;
+      rsM = cache.rsM;
+      standM = cache.standM;
+      hitM = cache.hitM;
+      doubleM = cache.doubleM;
+      splitM = cache.splitM;
+      cb(table = cache.table);
       return table;
     }
 
@@ -708,15 +717,26 @@ function Jackfish(cb, params) {
     let match = null;
     tableCache.forEach(entry => {
       if(!match && deepCompare(params, entry.params)) {
-        match = entry.table;
+        match = deepCopy(entry);
       }
     });
     return match;
   }
 
   function cacheTable(params, table) {
+    let tM; // Transition Matrix
     if(!searchTableCache(params)) {
-      tableCache.push({ params, table });
+      tableCache.push({
+        params: deepCopy(params),
+        table: deepCopy(table),
+        rM: deepCopy(rM),
+        rdM: deepCopy(rdM),
+        rsM: deepCopy(rsM),
+        standM: deepCopy(standM),
+        hitM: deepCopy(hitM),
+        doubleM: deepCopy(doubleM),
+        splitM: deepCopy(splitM)
+      });
     }
   }
 
@@ -1167,7 +1187,7 @@ function Jackfish(cb, params) {
     let propertiesMatch = true;
     Object.keys(obj1).forEach((key) => {
       if(typeof obj1[key] === 'object') {
-        if(!(key in obj2) || !deepCompare(obj1[key], obj2[key])) {
+        if(!obj2.hasOwnProperty(key) || !deepCompare(obj1[key], obj2[key])) {
           propertiesMatch = false;
         }
       } else if(obj1[key] !== obj2[key]) {
@@ -1178,7 +1198,7 @@ function Jackfish(cb, params) {
     // Verify that keys match
     let keysMatch = true;
     Object.keys(obj2).forEach((key) => {
-      if(!(key in obj1)) {
+      if(!obj1.hasOwnProperty(key)) {
         keysMatch = false;
       }
     });
@@ -1277,6 +1297,23 @@ function Jackfish(cb, params) {
       u[i] = v[i];
     }
     return u;
+  }
+
+  function deepCopy(obj) {
+    if(typeof obj !== 'object') return obj;
+    if(obj.length !== undefined) {
+      let copy = [];
+      obj.forEach(elem => {
+        copy.push(deepCopy(elem));
+      });
+      return copy;
+    } else {
+      let copy = {};
+      Object.keys(obj).forEach(key => {
+        copy[key] = deepCopy(obj[key]);
+      });
+      return copy;
+    }
   }
 
   /*-- Mathy Utility Functions --*/
