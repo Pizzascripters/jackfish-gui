@@ -1,0 +1,29 @@
+.dropdown {
+  display: inline-block;
+  background-color: #444;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+  margin: 5px;
+}
+
+.dropdown:hover {
+  cursor: pointer;
+}
+
+.dropdown > .dropdownText {
+  padding: 5px;
+}
+
+.dropdown > .options {
+  position: absolute;
+}
+
+.dropdown > .options > .option {
+  padding: 5px;
+  background-color: #444;
+}
+
+.dropdown > .options > .option:hover {
+  background-color: #3a3;
+}

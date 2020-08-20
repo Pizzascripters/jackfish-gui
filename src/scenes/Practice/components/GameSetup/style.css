@@ -1,0 +1,6 @@
+#gameSetup .number {
+  display: inline-block;
+}
+#gameSetup .number > input {
+  width: 50px;
+}

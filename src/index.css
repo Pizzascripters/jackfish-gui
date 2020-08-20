@@ -63,29 +63,15 @@ button.selected {
   background-color: #3a3;
 }
 
-.dropdown {
-  display: inline-block;
-  background-color: #444;
-  border: none;
-  color: inherit;
-  font-size: inherit;
-  margin: 5px;
+button.bigButton {
+  background-color: #04c;
+  border-radius: 10px;
+  font-size: 32px;
+  padding: 15px;
+  width: 100%;
 }
-.dropdown:hover {
-  cursor: pointer;
-}
-.dropdown > .dropdownText {
-  padding: 5px;
-}
-.dropdown > .options {
-  position: absolute;
-}
-.dropdown > .options > .option {
-  padding: 5px;
-  background-color: #444;
-}
-.dropdown > .options > .option:hover {
-  background-color: #3a3;
+button.bigButton:active {
+  background-color: #06c;
 }
 
 .tiny {
