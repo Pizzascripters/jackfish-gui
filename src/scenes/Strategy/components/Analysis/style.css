@@ -3,23 +3,23 @@
 }
 
 #analysis > #header {
-  font-size: 2.0vw;
+  font-size: 40px;
 }
 #analysis > #header.bottomMargin {
   margin-bottom: 20px;
 }
 
 #analysis > #insurance {
-  font-size: 1.8vw;
-  margin-bottom: 1vw;
+  font-size: 36px;
+  margin-bottom: 20px;
 }
 
 #analysis > #edge {
-  font-size: 1.8vw;
+  font-size: 36px;
 }
 
 #analysis > .bestmove {
-  font-size: 1.4vw;
+  font-size: 30px;
   margin-bottom: 20px;
 }
 
@@ -29,12 +29,12 @@
 
 #analysis > .dealerInfo > div:first-child,
 #analysis > .actionInfo > div:first-child {
-  font-size: 1.4vw;
+  font-size: 28px;
 }
 
 #analysis > .dealerInfo > div:not(first-child),
 #analysis > .actionInfo > div:not(first-child) {
-  font-size: 1vw;
+  font-size: 20px;
 }
 
 #analysis .small {

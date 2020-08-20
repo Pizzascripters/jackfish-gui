@@ -1,0 +1,49 @@
+#parameters {
+  flex: 2;
+}
+
+#simOutcome {
+  flex: 6;
+}
+
+#simRules {
+  flex: 2;
+  height: auto;
+}
+
+@media only screen and (max-width: 1200px) {
+  #simulation {
+    flex-wrap: wrap;
+  }
+
+  #parameters {
+    flex: 4 0 30%;
+  }
+
+  #simOutcome {
+    flex: 6 0 30%;
+  }
+
+  #simRules {
+    flex: 10 0 50%;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  #simulation {
+    flex-direction: column;
+  }
+
+  #parameters {
+    flex: 1 0;
+  }
+
+  #simOutcome {
+    width: auto;
+    flex: 1 0;
+  }
+
+  #simRules {
+    flex: 1 0;
+  }
+}

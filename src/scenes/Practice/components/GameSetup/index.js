@@ -36,7 +36,7 @@ class GameSetup extends React.Component {
   }
 
   render() {
-    return <div id='gameSetup'>
+    return <div>
       <BoxConfig number='1' onChange={this.onChangeBox.bind(this, 0)} box={this.boxes[0]}/>
       <BoxConfig number='2' onChange={this.onChangeBox.bind(this, 1)} box={this.boxes[1]}/>
       <BoxConfig number='3' onChange={this.onChangeBox.bind(this, 2)} box={this.boxes[2]}/>
@@ -44,7 +44,7 @@ class GameSetup extends React.Component {
       <BoxConfig number='5' onChange={this.onChangeBox.bind(this, 4)} box={this.boxes[4]}/><br />
       Starting Cash: $<Num value={this.cash} onChange={this.onChangeCash.bind(this)} /><br />
       Table Minimum: $<Num value={this.minimum} onChange={this.onChangeMinimum.bind(this)} /><br />
-      <button class='bigButton'>New Game</button>
+      <button className='bigButton'>New Game</button>
     </div>;
   }
 }

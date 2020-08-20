@@ -1,8 +1,49 @@
 .table {
-  width: 50%;
+  flex: 5;
+}
+
+#parameters {
+  flex: 2;
 }
 
 #analysis {
-  width: 30%;
+  flex: 3;
   height: auto;
+}
+
+@media only screen and (max-width: 1200px) {
+  #strategy {
+    flex-wrap: wrap;
+  }
+
+  #parameters {
+    flex: 7 0 30%;
+  }
+
+  .table {
+    flex: 12 0 30%;
+  }
+
+  #analysis {
+    flex: 19 0 50%;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  #strategy {
+    flex-direction: column;
+  }
+
+  #parameters {
+    flex: 1 0 50%;
+  }
+
+  .table {
+    flex: 1 0 50%;
+    padding: 20px;
+  }
+
+  #analysis {
+    flex: 1 0 50%;
+  }
 }

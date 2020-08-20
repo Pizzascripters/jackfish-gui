@@ -33,7 +33,7 @@ class Strategy extends React.Component {
         updateEngine={this.updateEngine.bind(this)}
       />
       <Game />
-      <div className='section'>
+      <div className='section' id='gameSetup'>
         <Tabs names={['Setup', 'Analysis']} renderTab={(i) => {
           if(i === 0) {
             return <GameSetup

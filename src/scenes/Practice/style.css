@@ -1,8 +1,51 @@
-#practice .section:last-child {
-  margin-left: auto;
-  width: 20%;
+#practice {
+  display: flex;
 }
 
-#practice #Game {
+#parameters {
+  flex: 2 0 20%;
+}
 
+#game {
+  flex: 5 0 40%;
+}
+
+#gameSetup {
+  flex: 3 0 30%;
+}
+
+@media only screen and (max-width: 1200px) {
+  #practice {
+    flex-wrap: wrap;
+  }
+
+  #parameters {
+    flex: 7 0 30%;
+  }
+
+  #game {
+    flex: 12 0 30%;
+  }
+
+  #gameSetup {
+    flex: 19 0 50%;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  #practice {
+    flex-direction: column;
+  }
+
+  #parameters {
+    flex: 1 0 60%;
+  }
+
+  #game {
+    flex: 1 0 60%;
+  }
+
+  #gameSetup {
+    flex: 1 0 60%;
+  }
 }
