@@ -59,7 +59,7 @@ class SimOutcome extends React.Component {
     if(uncutData.length > 0) {
       let max = uncutData.reduce((acc, x) => acc > x[1] ? acc : x[1]);
       uncutData.forEach((frequency, i) => {
-        if(frequency[1] / max >= 1e-3) {
+        if(frequency[1] / max >= 0) {
           graphData.push(frequency);
         }
       });
@@ -123,10 +123,10 @@ class SimOutcome extends React.Component {
         <button id='clearButton' onClick={this.onClear.bind(this)}>Clear</button>
         <Switch enabled={false} large={true} onChange={this.onToggle.bind(this)} />
       </div>
-      <Graph data={graphData}/>
+      <Graph data={graphData} suffix='hands'/>
       <div id='handsPlayed'>{this.state.hands} hands played</div>
       <div id='playerEdge'>{formatPercent(this.state.edge, true)}</div>
-      <Graph data={endingData}/>
+      <Graph data={endingData} suffix='sessions'/>
     </div>
   }
 }

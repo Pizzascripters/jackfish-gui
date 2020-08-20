@@ -52,7 +52,7 @@ class Graph extends React.Component {
               style={style}
             >{this.state[i] ? <div className='columnInfoContainer'>
               <div className='columnInfo'>
-                <span>{column[1]} hands</span><br />
+                <span>{column[1] + ' ' + (this.props.suffix ? this.props.suffix : 'cases')}</span><br />
                 <span>{formatPercent(column[1] / total)}</span>
               </div>
             </div> : null}
