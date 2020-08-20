@@ -2,11 +2,7 @@ import React from 'react';
 import {formatPercent} from '../../lib/lib.js';
 import './style.css';
 
-const DEFAULT_DATA = [
-  ['Lose 1:1', 0],
-  ['Push', 0],
-  ['Win 1:1', 0]
-];
+const DEFAULT_DATA = [];
 
 class Graph extends React.Component {
   constructor(props) {
@@ -48,14 +44,19 @@ class Graph extends React.Component {
           }
           return <div
             key={i}
-            className='column'
-            style={style}
             onMouseEnter={this.onMouseEnter.bind(this, i)}
             onMouseLeave={this.onMouseLeave.bind(this, i)}
-          >{this.state[i] ? <div className='columnInfo'>
-            <span>{column[1]} hands</span><br />
-            <span>{formatPercent(column[1] / total)}</span>
-          </div> : null}</div>;
+            className='columnContainer'>
+            <div
+              className='column'
+              style={style}
+            >{this.state[i] ? <div className='columnInfoContainer'>
+              <div className='columnInfo'>
+                <span>{column[1]} hands</span><br />
+                <span>{formatPercent(column[1] / total)}</span>
+              </div>
+            </div> : null}
+          </div></div>;
         })}
       </div>
       <div className='labels'>

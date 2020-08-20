@@ -11,6 +11,7 @@
   align-items: stretch;
   border-bottom: 2px solid white;
   border-left: 2px solid white;
+  height: 270px;
 }
 
 .graphContainer > .labels {
@@ -27,13 +28,22 @@
   font-size: 12px;
 }
 
-.graph > .column {
+.graph .columnContainer {
+  display: flex;
+  flex: 1;
+}
+
+.graph .column {
+  flex: 1;
   margin: 5px;
   margin-bottom: 0px;
   margin-top: auto;
-  flex: 1;
 
   background-color: #0cc;
+}
+
+.columnInfoContainer {
+  position: absolute;
 }
 
 .columnInfo {

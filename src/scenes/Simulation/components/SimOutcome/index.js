@@ -8,19 +8,8 @@ class SimOutcome extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      graphData: [
-        ['Lose 2:1', 4],
-        ['Lose 1:1', 32],
-        ['Push', 9],
-        ['Win 1:1', 28],
-        ['Win 3:2', 2],
-        ['Win 2:1', 9]
-      ],
-      endingData: [
-        ['$0', .33],
-        ['$500', .40],
-        ['100 hands', .27]
-      ],
+      graphData: [],
+      endingData: [],
       edge: 0
     };
   }
