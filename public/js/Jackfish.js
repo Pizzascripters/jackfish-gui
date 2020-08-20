@@ -190,6 +190,12 @@ function Jackfish(cb, params) {
     }
     table = [];
 
+    let cache = searchTableCache(params);
+    if(cache) {
+      cb(table = cache);
+      return table;
+    }
+
     if(comp || !matricesMade) {
       this.makeMatrices(null, comp);
     }
@@ -221,6 +227,9 @@ function Jackfish(cb, params) {
     if(cb) {
       cb(table);
     }
+
+    cacheTable(params, table);
+
     return table;
   }
 
@@ -335,7 +344,7 @@ function Jackfish(cb, params) {
             table: this.makeTable(null)
           }]
         }
-        console.log(tables)
+        // console.log(tables)
       },
 
       run: (cb) => {
@@ -693,6 +702,23 @@ function Jackfish(cb, params) {
   }
 
   /*-- Private functions --*/
+
+  let tableCache = [];
+  function searchTableCache(params) {
+    let match = null;
+    tableCache.forEach(entry => {
+      if(!match && deepCompare(params, entry.params)) {
+        match = entry.table;
+      }
+    });
+    return match;
+  }
+
+  function cacheTable(params, table) {
+    if(!searchTableCache(params)) {
+      tableCache.push({ params, table });
+    }
+  }
 
   function getTable(player, dealer, table_) {
     if(!table_) {
@@ -1136,6 +1162,29 @@ function Jackfish(cb, params) {
   }
 
   /*-- General Utility Functions --*/
+
+  function deepCompare(obj1, obj2) {
+    let propertiesMatch = true;
+    Object.keys(obj1).forEach((key) => {
+      if(typeof obj1[key] === 'object') {
+        if(!(key in obj2) || !deepCompare(obj1[key], obj2[key])) {
+          propertiesMatch = false;
+        }
+      } else if(obj1[key] !== obj2[key]) {
+        propertiesMatch = false;
+      }
+    });
+
+    // Verify that keys match
+    let keysMatch = true;
+    Object.keys(obj2).forEach((key) => {
+      if(!(key in obj1)) {
+        keysMatch = false;
+      }
+    });
+
+    return propertiesMatch && keysMatch;
+  }
 
   // Index state,state matrix: m[state][state]
   // function iSSMatrix(m, i, j) {
