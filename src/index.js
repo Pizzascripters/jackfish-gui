@@ -7,7 +7,7 @@ import Simulation from './scenes/Simulation';
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { page: 'strategy' };
+    this.state = { page: 'simulation' };
   }
 
   onClick(page) {

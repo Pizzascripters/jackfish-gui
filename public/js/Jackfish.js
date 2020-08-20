@@ -145,9 +145,10 @@ function Jackfish(cb, params) {
     if(params.count.system !== 'none') {
       params.count.indices = SYSTEM_NAMES[params.count.system];
     }
-    comp = deckComp(params.count);
-    this.comp = comp;
-    cb(params);
+    this.comp = comp = deckComp(params.count);
+    if(cb) {
+      cb(params);
+    }
   }
 
   this.makeMatrices = (cb, comp) => {
@@ -201,7 +202,10 @@ function Jackfish(cb, params) {
       hitM = cache.hitM;
       doubleM = cache.doubleM;
       splitM = cache.splitM;
-      cb(table = cache.table);
+      table = cache.table;
+      if(cb) {
+        cb(table);
+      }
       return table;
     }
 
@@ -337,23 +341,23 @@ function Jackfish(cb, params) {
         // Generate strategy tables to reference
         let tables = [];
         if(params.count.system !== 'none') {
+          let originalTc = params.count.tc;
           for(let tc = -12; tc <= 12; tc++) {
+            params.count.tc = tc;
+            this.setParams(null, params);
             tables.push({
               trueCount: tc,
-              table: this.makeTable(null, countingComp({
-                indices: params.count.indices,
-                tc: tc,
-                decks: params.count.decks
-              }))
+              table: this.makeTable()
             });
           }
+          params.count.tc = originalTc;
+          this.setParams(null, params);
         } else {
           tables = [{
             trueCount: 0,
             table: this.makeTable(null)
           }]
         }
-        // console.log(tables)
       },
 
       run: (cb) => {
