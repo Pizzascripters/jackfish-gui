@@ -15,6 +15,7 @@ class SimRules extends React.Component {
       maxCash: Infinity,
       yellow: 1
     };
+    this.rules = [];
   }
 
   addRule() {
@@ -23,27 +24,41 @@ class SimRules extends React.Component {
       bet: 10
     };
     rule.onChange = this.onChangeRule.bind(this, rule);
-    this.state.rules.splice(0, 0, rule);
+    this.rules.splice(0, 0, rule);
+    let copyRules = [];
+    for(let i = 0; i < this.rules.length; i++) {
+      copyRules.push({
+        value: this.rules[i].value,
+        bet: this.rules[i].bet
+      });
+    }
     this.setState({
-      rules: this.state.rules
+      rules: copyRules
     });
   }
 
   onChangeRule(rule, newValue, newBet) {
     rule.value = newValue;
     rule.bet = newBet;
-    this.setState({});
+    let copyRules = [];
+    for(let i = 0; i < this.rules.length; i++) {
+      copyRules.push({
+        value: this.rules[i].value,
+        bet: this.rules[i].bet
+      });
+    }
+    this.setState({
+      rules: copyRules
+    });
   }
 
   destruct(key) {
-    this.state.rules.forEach((rule, i) => {
+    this.rules.forEach((rule, i) => {
       if(String(i) === String(key)) {
-        this.state.rules.splice(i, 1);
+        this.rules.splice(i, 1);
       }
     });
-    this.setState({
-      rules: this.state.rules
-    });
+    this.setState({});
   }
 
   onChangeBet(bet) {
@@ -93,7 +108,7 @@ class SimRules extends React.Component {
 
   renderBetting() {
     return <div>
-      {this.state.rules.map((rule, i) => <Rule
+      {this.rules.map((rule, i) => <Rule
         value={rule.value}
         bet={rule.bet}
         onChange={rule.onChange}
@@ -102,7 +117,7 @@ class SimRules extends React.Component {
       }
       <div className='rule'>
         <span className='condition'>
-          {this.state.rules.length > 0 ? 'Otherwise ' : 'Always '}
+          {this.rules.length > 0 ? 'Otherwise ' : 'Always '}
         </span>
         <span className='bet'>
           bet $<Num value={this.state.bet} onChange={this.onChangeBet.bind(this)} />

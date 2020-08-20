@@ -102,14 +102,17 @@ function Jackfish(cb, params) {
 
   /*-- Private variables --*/
   let comp,
-      table;
+      table,
+      matricesMade = false;
 
   // Return matrices. Specifies return given player's hand and dealer's card under perfect play
   let tM; // Transition Matrix
   let rM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return without doubling
   let rdM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with doubling
   let rsM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with surrendering
+  let standM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
   let hitM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
+  let doubleM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
   let splitM = zeroes([DEALER_STATES.length, DEALER_STATES.length]);
 
   /*-- Public functions --*/
@@ -141,10 +144,15 @@ function Jackfish(cb, params) {
     params = params_;
     params.count.indices = SYSTEM_NAMES[params.count.system];
     comp = deckComp(params.count);
+    this.comp = comp;
     cb(params);
   }
 
-  this.makeMatrices = (cb) => {
+  this.makeMatrices = (cb, comp) => {
+    if(comp === undefined) {
+      comp = this.comp;
+    }
+
     // Calculate dealer's odds to reach each endstate
     endM = endMatrix(comp, params.soft17, params.count.decks * 52);
 
@@ -161,19 +169,30 @@ function Jackfish(cb, params) {
       if(params.peek || !(dealer === DEALER_TEN || dealer === DEALER_ACE)) {
         rsM[j][i] = rdM[j][i] = rM[j][i] = params.blackjack;
       } else {
-        let bjOdds = getBJOdds(dealer);
+        let bjOdds = getBJOdds(comp, dealer);
         rsM[j][i] = rdM[j][i] = rM[j][i] = params.blackjack * (1 - bjOdds) - bjOdds;
       }
     });
 
     // Calculate player's return by doubling
-    doubleM = doubleReturns(standM, comp);
+    doubleM = doubleReturns(comp, standM);
 
-    cb({endM, standM, doubleM});
+    matricesMade = true;
+    if(cb) {
+      cb({endM, standM, doubleM});
+    }
+    return {endM, standM, doubleM};
   }
 
-  this.makeTable = (cb) => {
+  this.makeTable = (cb, comp) => {
+    if(comp === undefined) {
+      comp = this.comp;
+    }
     table = [];
+
+    if(comp || !matricesMade) {
+      this.makeMatrices(null, comp);
+    }
 
     HAND_ORDER.forEach((player, i) => {
       if(player < 0) return;
@@ -185,7 +204,7 @@ function Jackfish(cb, params) {
       }
       DEALER_STATES.forEach((dealer, j) => {
         function doCell() {
-          let move = bestMove(player & 0x3f, dealer, pair);
+          let move = bestMove(comp, player & 0x3f, dealer, pair);
           if(!pair) {
             rsM[n][j] = move.ret;
             rdM[n][j] = move.retNS;
@@ -199,7 +218,10 @@ function Jackfish(cb, params) {
       });
     });
 
-    cb(table);
+    if(cb) {
+      cb(table);
+    }
+    return table;
   }
 
   this.takeInsurance = (cb, cards) => {
@@ -257,7 +279,7 @@ function Jackfish(cb, params) {
         insurance = 1.5*comp[CARD_STATES.indexOf(10)] - .5;
       }
       if(params.peek) {
-        let bjOdds = getBJOdds(CARD_STATES[j]);
+        let bjOdds = getBJOdds(comp, CARD_STATES[j]);
         return r * (1 - bjOdds) - bjOdds + insurance;
       } else {
         return r + insurance;
@@ -269,9 +291,9 @@ function Jackfish(cb, params) {
 
   /*-- Monte Carlo Simulation --*/
   function createSimulation(options) {
-    let cash, hands, shoes,
-        totalHands, totalBet, totalDiff, frequencies, endRecord, mean,
-        p, activeComp;
+    let cash, hands, shoes, // Assigned in reset
+        totalHands, totalBet, totalDiff, frequencies, endRecord, mean, // Assigned in clear
+        p, activeComp, tables; // Assigned in config
     let running = false,
         sessions = 0;
 
@@ -293,6 +315,27 @@ function Jackfish(cb, params) {
         }
         activeComp = copy(comp); // Real deck composition in game
         sim.clear();
+
+        // Generate strategy tables to reference
+        let tables = [];
+        if(params.count.system !== 'none') {
+          for(let tc = -12; tc <= 12; tc++) {
+            tables.push({
+              trueCount: tc,
+              table: this.makeTable(null, countingComp({
+                indices: params.count.indices,
+                tc: tc,
+                decks: params.count.decks
+              }))
+            });
+          }
+        } else {
+          tables = [{
+            trueCount: 0,
+            table: this.makeTable(null)
+          }]
+        }
+        console.log(tables)
       },
 
       run: (cb) => {
@@ -305,17 +348,22 @@ function Jackfish(cb, params) {
           shoes < options.maxShoes &&
           (cash < options.maxCash || options.maxCash === Infinity)
         ) {
-          let bet;
-          if(cards.trueCount === undefined || cards.trueCount > 6) {
-            bet = 10;
-          } else {
-            bet = 0;
+          let bet = options.bet;
+          let maxTc = -Infinity;
+          if(cards.trueCount !== undefined) {
+            options.rules.forEach(rule => {
+              if(cards.trueCount > maxTc && cards.trueCount > rule.value) {
+                maxTc = rule.value;
+                bet = rule.bet;
+              }
+            });
           }
           let r = playHand.bind(this)(activeComp, cards, {
             dealer,
             player: p,
             forceMove: options.forceMove,
             shuffledComp: comp,
+            tables
           });
           hands++;
           totalHands++;
@@ -441,6 +489,26 @@ function Jackfish(cb, params) {
 
     const P = progressionMatrix();
 
+    // If using reference tables, find the appropriate table based on the count
+    function getActiveTable() {
+      if(options.tables && cards.trueCount) {
+        let minDistance = Infinity;
+        let closestTable = null;
+        options.tables.forEach((table) => {
+          let distance = Math.abs(table.trueCount - cards.trueCount);
+          if(distance < minDistance) {
+            minDistance = distance;
+            closestTable = table;
+          }
+        });
+        return closestTable.table;
+      } else if(options.tables) {
+        return options.tables[0].table;
+      } else {
+        return null;
+      }
+    }
+
     // Draw player cards
     let oldCount = cards.trueCount;
     let p = []; // List of player cards
@@ -488,7 +556,7 @@ function Jackfish(cb, params) {
       if(options.forceMove) {
         action = options.forceMove;
       } else {
-        action = getTable(player, dealer).action;
+        action = getTable(player, dealer, getActiveTable()).action;
       }
 
       // Handle no doubling
@@ -539,7 +607,7 @@ function Jackfish(cb, params) {
         while(action === 'H' || action === 'D') {
           player = P[HAND_STATES.indexOf(player & 0x3f)][drawCard(comp, cards, options.shuffledComp)];
           if(player !== BUST) {
-            action = getTable(player, dealer).action;
+            action = getTable(player, dealer, getActiveTable()).action;
           } else {
             break;
           }
@@ -626,13 +694,16 @@ function Jackfish(cb, params) {
 
   /*-- Private functions --*/
 
-  function getTable(player, dealer) {
+  function getTable(player, dealer, table_) {
+    if(!table_) {
+      table_ = table;
+    }
     if(player && dealer) {
       if(dealer === 'A' || dealer === ACE) dealer = DEALER_ACE;
       if(dealer === 10) dealer = DEALER_TEN;
-      return table[TABLE_HANDS.indexOf(player)][DEALER_STATES.indexOf(dealer)];
+      return table_[TABLE_HANDS.indexOf(player)][DEALER_STATES.indexOf(dealer)];
     } else {
-      return table;
+      return table_;
     }
   }
 
@@ -779,7 +850,6 @@ function Jackfish(cb, params) {
   // Calculate player's return by standing
   function standReturns() {
     let a = [];
-    // Looks like O(N^3), but is really O(1) because the arrays we're iterating over have constant size
     HAND_STATES.forEach((hand, i) => {
       a.push([]);
       let value = getHandDetails(hand)[0]; // Player value
@@ -803,7 +873,7 @@ function Jackfish(cb, params) {
     return a;
   }
 
-  function doubleReturns() {
+  function doubleReturns(comp, standM) {
     let a = [];
     let H = hitMatrix(comp);
     HAND_STATES.forEach((hand, i) => {
@@ -818,12 +888,12 @@ function Jackfish(cb, params) {
   }
 
   // Calculate player's return by hitting
-  function hitReturns(i, r, comp) {
+  function hitReturns(comp, i, r) {
     return dot(transitionMatrix(comp)[i], r);
   }
 
   // Calculate player's return by splitting
-  function splitReturns(i, r, comp, cards, hands) {
+  function splitReturns(comp, cards, i, r, hands) {
     if(!hands) {
       hands = 1;
     }
@@ -847,14 +917,14 @@ function Jackfish(cb, params) {
       let pairChance = comp[j];
       if(pairChance > 0) {
         let k = pairIndex(i);
-        hitReturns[k] = pairChance * splitReturns(i, r, comp, cards, hands+1);
+        hitReturns[k] = pairChance * splitReturns(comp, cards, i, r, hands+1);
       }
     }
     return 2 * vtotal(hitReturns);
   }
 
   /*-- Move calculation --*/
-  function bestMove(state, dealer, pair) {
+  function bestMove(comp, state, dealer, pair) {
     let j = DEALER_STATES.indexOf(dealer);
 
     // Calculate return by splitting
@@ -868,7 +938,7 @@ function Jackfish(cb, params) {
       } else {
         r = rM;
       }
-      split = splitReturns(findHand(state), transpose(r)[j], copy(comp), {cards:params.count.decks * 52});
+      split = splitReturns(copy(comp), {cards:params.count.decks * 52}, findHand(state), transpose(r)[j]);
       iDealer(splitM, state)[j] = split;
       state = pairState(state); // State before split
     }
@@ -880,9 +950,9 @@ function Jackfish(cb, params) {
     // Calculate return by hitting
     let hit;
     if(params.double.anytime) {
-      hit = hitReturns(i, transpose(rdM)[j], comp);
+      hit = hitReturns(comp, i, transpose(rdM)[j]);
     } else {
-      hit = hitReturns(i, transpose(rM)[j], comp);
+      hit = hitReturns(comp, i, transpose(rM)[j]);
     }
     hitM[i][j] = hit;
 
@@ -891,7 +961,7 @@ function Jackfish(cb, params) {
     if(params.surrender === 'late' || (params.surrender === 'early' && !params.peek)) {
       sur = -.5;
     } else if(params.surrender === 'early') {
-      let bjOdds = getBJOdds(dealer);
+      let bjOdds = getBJOdds(comp, dealer);
       sur = (bjOdds - .5) / (1 - bjOdds);
     }
 
@@ -925,7 +995,7 @@ function Jackfish(cb, params) {
     return best;
   }
 
-  function getBJOdds(dealer) {
+  function getBJOdds(comp, dealer) {
     let bjOdds = 0;
     if(dealer === ACE || dealer === DEALER_ACE) {
       bjOdds = comp[DEALER_STATES.indexOf(DEALER_TEN)];
@@ -1273,9 +1343,6 @@ self.addEventListener('message', e => {
     break;
   case 'getParams':
     jackfish.getParams(cb);
-    break;
-  case 'makeMatrices':
-    jackfish.makeMatrices(cb);
     break;
   case 'getTable':
     jackfish.getTable(cb);
