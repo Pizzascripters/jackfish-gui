@@ -28,6 +28,29 @@ function Jackfish(params) {
   // All possible hands the dealer can start with
   const DEALER_STATES = HAND_STATES.filter(hand => (hand > 0 && hand < 10) || hand === DEALER_TEN || hand === DEALER_ACE);
 
+  const CARD_NAMES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  const SUIT_NAMES = ['C', 'D', 'H', 'S'];
+  const IMAGE_KEYS = (() => {
+    let keys = [];
+    CARD_NAMES.forEach((card) => {
+      SUIT_NAMES.forEach((suit) => {
+        keys.push(card + suit);
+      });
+    });
+    return keys;
+  })();
+  const IMAGE_HREFS = (() => {
+    let hrefs = {};
+    CARD_NAMES.forEach((card) => {
+      SUIT_NAMES.forEach((suit) => {
+        hrefs[card + suit] = `cards/${card + suit}.png`;
+      });
+    });
+    return hrefs;
+  })();
+
+  const DEAL_COOLDOWN = 300; // ms
+
   /*-- Public Functions --*/
 
   // Positive number indicates player has an edge
@@ -59,6 +82,9 @@ function Jackfish(params) {
     worker.postMessage(['setParams', [params_]]);
     params = params_;
   }
+  this.setPracticeParams = (practiceParams_) => {
+    practiceParams = practiceParams_;
+  }
   this.takeInsurance = () => insurance;
   this.createSimulation = (options) => {
     worker.postMessage(['createSimulation', [options]]);
@@ -89,7 +115,306 @@ function Jackfish(params) {
     ['ACE', ACE],
   ], true);
 
+  /*-- Canvas for practice --*/
+  window.addEventListener('load', e => {
+    let cvs = document.getElementById('cvs');
+    if(cvs) {
+      let mouse = {};
+      cvs.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX - cvs.getBoundingClientRect().x;
+        mouse.y = e.clientY - cvs.getBoundingClientRect().y;
+      });
+      cvs.addEventListener('mousedown', (e) => {
+        mouse.down = true;
+      });
+      cvs.addEventListener('mouseup', (e) => {
+        mouse.down = false;
+      });
+
+      function setSize() {
+        cvs.width = cvs.clientWidth;
+        cvs.height = cvs.clientHeight;
+      }
+      window.addEventListener('resize', setSize);
+      setSize();
+
+      let ctx = cvs.getContext('2d');
+      loadImages(startFrameCycle.bind(this, cvs, ctx, mouse));
+    }
+  });
+
+  function startFrameCycle(cvs, ctx, mouse, images) {
+    let oldTime = 0;
+    let game = {
+      cash: practiceParams.cash,
+      bets: [0, 0, 0, 0, 0]
+    };
+    game.reset = () => {
+      game.betting = true;
+      game.dealer = [];
+      game.players = [[], [], [], [], []];
+      game.active = 0; // Which player is currently playing
+      game.shoe = new Shoe();
+      game.dealCooldown = 0;
+    }
+    game.reset();
+
+    frame.bind(this)(0);
+
+    function frame(time) {
+      let pointer = false;
+
+      let delta = time - oldTime;
+      oldTime = time;
+
+      let CARD_WIDTH = cvs.width / 12;
+      let CARD_HEIGHT = 1056 * CARD_WIDTH / 691;
+
+      function drawCard(card, x, y, n) {
+        ctx.drawImage(
+          images[card],
+          cvs.width * x - CARD_WIDTH / 2 - n * CARD_WIDTH / 3,
+          cvs.height * y + n * CARD_WIDTH / 3,
+          CARD_WIDTH, CARD_HEIGHT
+        );
+      }
+
+      ctx.fillStyle = '#030';
+      ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+      // Draw info text
+      ctx.fillStyle = '#fff';
+      ctx.font = '42px Noto Sans';
+      let text = `$${game.cash}`;
+      ctx.fillText(text, cvs.width - ctx.measureText(text).width - 20, 62);
+
+      // Draw dealer cards
+      game.dealer.forEach((card, i) => {
+        drawCard(card, .5, .02, i);
+      });
+
+      // Draw player cards
+      game.players.forEach((player, i) => {
+        if(game.active === null || game.active === 5 || game.active === 6 || game.active === i) {
+          ctx.globalAlpha = 1;
+        } else {
+          ctx.globalAlpha = .2;
+        }
+        player.forEach((card, j) => {
+          if(card === -1) {
+            if(game.dealCooldown <= 0) {
+              game.active++;
+              player.pop();
+            }
+            return;
+          }
+          drawCard(card, (i+1)/6 + CARD_WIDTH / cvs.width / 6, .55, j);
+        });
+
+        // Check if player is 21 or bust or not betting
+        if(
+          game.active === i &&
+          ((!game.betting && game.bets[i] <= practiceParams.minimum) ||
+          ((getValue(player) === 21 || getValue(player) === Infinity || getValue(player) === -1) && game.dealCooldown <= 0))
+        ) {
+          game.active++;
+        }
+      });
+      ctx.globalAlpha = 1;
+
+      // Draw boxes
+      for(let i = 0; i < 5; i++) {
+        let x = cvs.width * (i+1)/6;
+        let y = cvs.height * .9;
+        let r = cvs.height * .05;
+
+        ctx.strokeStyle = '#fff';
+        if(game.active === i) {
+          ctx.lineWidth = 5;
+        } else {
+          ctx.lineWidth = 2;
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, 2*Math.PI);
+        ctx.stroke();
+        ctx.font = '20px Noto Sans';
+        ctx.fillStyle = '#fff';
+        if(game.bets[i] !== 0) {
+          ctx.fillText(
+            game.bets[i],
+            cvs.width * (i+1)/6 - ctx.measureText(game.bets[i]).width / 2,
+            cvs.height * .9 + 8
+          );
+        }
+
+        // Hover events
+        let hover = Math.pow(x - mouse.x, 2) + Math.pow(y - mouse.y, 2) < Math.pow(r, 2);
+        if(hover && mouse.down) {
+          pointer = true;
+          game.active = i;
+        } else if(hover) {
+          pointer = true;
+        }
+      }
+
+      // Reset if shoe is too small
+      if(game.shoe.length < 52) {
+        game.reset();
+      }
+
+      // Deal if dealing hasn't finished
+      if(!game.betting) {
+        let finishedPlayers = true;
+        let finishedDealing = true;
+        let minSize = Math.min(...game.players.map((player, i) => {
+          if(game.bets[i] <= practiceParams.minimum) {
+            return Infinity;
+          } else {
+            return player.length;
+          }
+        }));
+        game.players.forEach((player, i) => {
+          if(game.bets[i] && player.length === minSize && minSize < 2) {
+            finishedPlayers = false;
+            finishedDealing = false;
+            if(game.dealCooldown <= 0) {
+              player.push(game.shoe.draw());
+              game.dealCooldown = DEAL_COOLDOWN;
+            }
+          }
+        });
+        if(finishedPlayers && game.dealer.length === 0) {
+          finishedDealing = false;
+          if(game.dealCooldown <= 0) {
+            game.dealer.push(game.shoe.draw());
+          }
+        }
+        if(game.active === null && finishedDealing && game.dealCooldown <= 0) {
+          game.active = 0;
+        }
+        game.finishedDealing = finishedDealing;
+      }
+
+      // If players are finished, do dealer
+      if(game.active === 5 && game.dealCooldown <= 0) {
+        let value = getValue(game.dealer);
+        if((value < 17 || (params.soft17 && value === 17 && isSoft(game.dealer))) && value !== -1) {
+          game.dealer.push(game.shoe.draw());
+          game.dealCooldown = DEAL_COOLDOWN;
+        } else {
+          game.active++;
+          game.dealCooldown = DEAL_COOLDOWN * 10;
+
+          // Update cash
+          game.players.forEach((player, i) => {
+            if(game.bets[i] <= practiceParams.minimum) return;
+            let pValue = getValue(player);
+            if(pValue === Infinity && value !== Infinity) {
+              game.cash += params.blackjack * game.bets[i];
+            } else if(pValue > value) {
+              game.cash += game.bets[i];
+            } else if((pValue < value || pValue === -1) && game.cash > game.bets[i]) {
+              game.cash -= game.bets[i];
+            } else if(pValue < value || pValue === -1) {
+              game.bets[i] = 0;
+            }
+          });
+        }
+      } else if(game.active === 6 && game.dealCooldown <= 0) {
+        game.reset();
+      }
+
+      if(game.betting) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '96px Noto Sans';
+        let text = 'Click to deal';
+
+        let width = ctx.measureText(text).width;
+        let height = 96;
+        let x = cvs.width / 2 - width / 2;
+        let y = cvs.height * .2;
+        ctx.fillText(text, x, y + height);
+
+        let hover = mouse.x > x && mouse.x < x + width && mouse.y > y && mouse.y < y + height;
+        if(mouse.down && hover) {
+          pointer = true;
+          game.betting = false;
+          game.active = null;
+        } else if(hover) {
+          pointer = true;
+        }
+      }
+
+      if(pointer) {
+        cvs.style.cursor = 'pointer';
+      } else {
+        cvs.style.cursor = 'auto';
+      }
+
+      game.dealCooldown -= delta;
+      window.requestAnimationFrame(frame.bind(this));
+    }
+
+    window.addBet = (bet) => {
+      if(game.betting) {
+        if(bet === 0) {
+          game.cash += game.bets[game.active];
+          game.bets[game.active] = 0;
+        } else {
+          if(game.cash >= bet) {
+            game.cash -= bet;
+            game.bets[game.active] += bet;
+          }
+        }
+      }
+    }
+
+    window.doAction = (action) => {
+      if(game.dealCooldown <= 0 && game.finishedDealing && !game.betting) {
+        switch(action) {
+          case 'Hit':
+            game.players[game.active].push(game.shoe.draw());
+            game.dealCooldown = DEAL_COOLDOWN;
+            break;
+          case 'Stand':
+            game.active++;
+            break;
+          case 'Double':
+            if(game.cash >= game.bets[game.active]) {
+              game.cash -= game.bets[game.active];
+              game.bets[game.active] *= 2;
+              game.players[game.active].push(game.shoe.draw());
+              game.players[game.active].push(-1);
+              game.dealCooldown = DEAL_COOLDOWN;
+            }
+            break;
+          default:
+            break;
+        }
+      }
+    }
+  }
+
+  function loadImages(cb) {
+    let images = {};
+    let imagesLoaded = 0;
+
+    function onloadImage() {
+      if(++imagesLoaded >= 52) {
+        cb(images);
+      }
+    }
+
+    Object.keys(IMAGE_HREFS).forEach(key => {
+      let img = new Image();
+      img.src = 'img/' + IMAGE_HREFS[key];
+      img.onload = onloadImage;
+      images[key] = img;
+    });
+  }
+
   /*-- Private Variables --*/
+  let practiceParams = {};
   let comp;
   let endM, standM, doubleM;
   let table;
@@ -163,10 +488,72 @@ function Jackfish(params) {
 
   /*-- High Level Functions --*/
 
+  function Shoe() {
+    let orderedCards = [];
+    for(let i = 0; i < params.count.decks; i++) {
+      IMAGE_KEYS.forEach(card => {
+        orderedCards.push(card);
+      });
+    }
+
+    let cards = [];
+    while(orderedCards.length > 0) {
+      let i = Math.floor(Math.random() * orderedCards.length);
+      cards.push(orderedCards[i]);
+      orderedCards.splice(i, 1);
+    }
+
+    this.draw = () => {
+      return cards.pop();
+    }
+  }
+
   function createHand(value, soft, pair) {
     if(pair) value += 0x40;
     if(soft) value += 0x20;
     return value;
+  }
+
+  function getValue(cards) {
+    if(cards.length === 0) return 0;
+    cards = cards.map(card => {
+      if(card[1] === '0' || card[0] === 'J' || card[0] === 'Q' || card[0] === 'K') {
+        return 10;
+      } else if(card[0] === 'A') {
+        return 1;
+      } else {
+        return Number(card[0]);
+      }
+    });
+    let sum = cards.reduce((acc, card) => acc + card);
+    if(cards.indexOf(1) !== -1 && sum <= 11) {
+      sum += 10;
+    }
+    if(sum === 21 && cards.length === 2) {
+      return Infinity; // Blackjack
+    } else if(sum > 21) {
+      return -1; // Bust
+    } else {
+      return sum;
+    }
+  }
+
+  function isSoft(cards) {
+    if(cards.length === 0) return 0;
+    cards = cards.map(card => {
+      if(card[1] === '0' || card[0] === 'J' || card[0] === 'Q' || card[0] === 'K') {
+        return 10;
+      } else if(card[0] === 'A') {
+        return 1;
+      } else {
+        return Number(card[0]);
+      }
+    });
+    let sum = cards.reduce((acc, card) => acc + card);
+    if(cards.indexOf(1) !== -1 && sum <= 11) {
+      return true;
+    }
+    return false;
   }
 
   /*-- General Utility Functions --*/

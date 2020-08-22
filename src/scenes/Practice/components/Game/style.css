@@ -1,0 +1,38 @@
+#game {
+  padding: 10px;
+}
+
+#game #actions {
+  display: flex;
+  justify-content: space-around;
+}
+
+#game canvas {
+  width: 100%;
+  height: 75vh;
+}
+
+#actions button {
+  background-color: #c60;
+  width: 15%;
+  padding: 10px;
+  font-size: 1.5vw;
+  border-radius: 10px;
+}
+
+#actions button:active {
+  background-color: #c80;
+}
+
+#chips {
+  height: 64px;
+  padding: 20px;
+}
+
+#chips img {
+  float: right;
+  margin-left: 20px;
+}
+#chips img:hover {
+  cursor: pointer;
+}

@@ -6,25 +6,35 @@ import Parameters from '../../components/Parameters';
 import Tabs from '../../components/Tabs';
 import './style.css';
 
-class Strategy extends React.Component {
+class Practice extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { selection: null, jackfish: new Jackfish() };
+    this.state = { selection: null };
+    this.jackfish = null;
     this.boxes = [];
-    for(let i = 0; i < 5; i++) this.boxes.push({ai: false, difficulty: 'Basic Strategy'})
+    for(let i = 0; i < 5; i++) this.boxes.push({ai: false, difficulty: 'Basic Strategy'});
     this.cash = 1000;
     this.minimum = 10;
   }
 
   updateEngine(params) {
-    let jackfish = this.state.jackfish;
-    jackfish.setParams(params);
+    let jackfish = this.jackfish;
+    if(!jackfish) {
+      this.jackfish = new Jackfish(params);
+    } else {
+      jackfish.setParams(params);
+    }
   }
 
   onChangeSetup(setup) {
     this.boxes = setup.boxes;
     this.cash = setup.cash;
     this.minimum = setup.minimum;
+    this.jackfish.setPracticeParams({
+      boxes: this.boxes,
+      cash: this.cash,
+      minimum: this.minimum
+    })
   }
 
   render() {
@@ -52,4 +62,4 @@ class Strategy extends React.Component {
   }
 }
 
-export default Strategy;
+export default Practice;

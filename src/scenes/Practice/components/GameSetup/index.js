@@ -36,6 +36,7 @@ class GameSetup extends React.Component {
   }
 
   render() {
+    this.onChange.bind(this)();
     return <div>
       <BoxConfig number='1' onChange={this.onChangeBox.bind(this, 0)} box={this.boxes[0]}/>
       <BoxConfig number='2' onChange={this.onChangeBox.bind(this, 1)} box={this.boxes[1]}/>
