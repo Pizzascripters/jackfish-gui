@@ -51,6 +51,28 @@ function Jackfish(params) {
 
   const DEAL_COOLDOWN = 300; // ms
 
+  /*-- Private Variables --*/
+  let practiceParams = {};
+  let comp;
+  let endM, standM, doubleM;
+  let table;
+  let edge, insurance;
+  let simCallback;
+  let loaded = false;
+  let listeners = [];
+  let cvs, ctx,
+    oldTime = 0,
+    images = {},
+    game = {},
+    mouse = {};
+
+  // Return matrices. Specifies return given player's hand and dealer's card under perfect play
+  let rM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return without doubling
+  // let rdM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with doubling
+  let rsM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with surrendering
+  let hitM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
+  let splitM = zeroes([DEALER_STATES.length, DEALER_STATES.length]);
+
   /*-- Public Functions --*/
 
   // Positive number indicates player has an edge
@@ -115,11 +137,11 @@ function Jackfish(params) {
     ['ACE', ACE],
   ], true);
 
-  /*-- Canvas for practice --*/
+  /*-- Practice --*/
   window.addEventListener('load', e => {
-    let cvs = document.getElementById('cvs');
+    cvs = document.getElementById('cvs');
     if(cvs) {
-      let mouse = {};
+      mouse = {};
       cvs.addEventListener('mousemove', (e) => {
         mouse.x = e.clientX - cvs.getBoundingClientRect().x;
         mouse.y = e.clientY - cvs.getBoundingClientRect().y;
@@ -138,261 +160,265 @@ function Jackfish(params) {
       window.addEventListener('resize', setSize);
       setSize();
 
-      let ctx = cvs.getContext('2d');
-      loadImages(startFrameCycle.bind(this, cvs, ctx, mouse));
+      ctx = cvs.getContext('2d');
+      loadImages(startFrameCycle.bind(this));
     }
   });
 
-  function startFrameCycle(cvs, ctx, mouse, images) {
-    let oldTime = 0;
-    let game = {
+  function finishHand() {
+    // If there's an unfinished side hand
+    if(game.unfinished[game.active] && game.unfinished[game.active].length > 0) {
+      game.dealCooldown = DEAL_COOLDOWN;
+      setTimeout(() => {
+        game.dealCooldown = DEAL_COOLDOWN;
+        game.finished[game.active].push(game.players[game.active]);
+        game.finishedBets[game.active].push(game.bets[game.active]);
+        game.players[game.active] = game.unfinished[game.active].pop();
+        game.bets[game.active] = game.unfinishedBets[game.active].pop();
+      }, DEAL_COOLDOWN);
+    } else {
+      game.active++;
+    }
+  }
+
+  function startFrameCycle(images_) {
+    images = images_;
+    oldTime = 0;
+    game = {
       cash: practiceParams.cash,
-      bets: [0, 0, 0, 0, 0]
+      bets: [0, 0, 0, 0, 0],
+      shoe: new Shoe()
     };
     game.reset = () => {
       game.betting = true;
       game.dealer = [];
       game.players = [[], [], [], [], []];
+      game.unfinished = [[], [], [], [], []]; // Unfinished side hands; where hands go after a split
+      game.finished = [[], [], [], [], []]; // Finished side hands
+      game.unfinishedBets = [[], [], [], [], []];
+      game.finishedBets = [[], [], [], [], []];
       game.active = 0; // Which player is currently playing
-      game.shoe = new Shoe();
       game.dealCooldown = 0;
     }
     game.reset();
 
     frame.bind(this)(0);
+  }
 
-    function frame(time) {
-      let pointer = false;
+  function frame(time) {
+    let pointer = false; // Should cursor be pointer?
 
-      let delta = time - oldTime;
-      oldTime = time;
+    let delta = time - oldTime;
+    oldTime = time;
 
-      let CARD_WIDTH = cvs.width / 12;
-      let CARD_HEIGHT = 1056 * CARD_WIDTH / 691;
+    const CARD_WIDTH = cvs.width / 12;
+    const CARD_HEIGHT = 1056 * CARD_WIDTH / 691;
 
-      function drawCard(card, x, y, n) {
-        ctx.drawImage(
-          images[card],
-          cvs.width * x - CARD_WIDTH / 2 - n * CARD_WIDTH / 3,
-          cvs.height * y + n * CARD_WIDTH / 3,
-          CARD_WIDTH, CARD_HEIGHT
+    function drawCard(card, x, y, n) {
+      ctx.drawImage(
+        images[card],
+        cvs.width * x - CARD_WIDTH / 2 - n * CARD_WIDTH / 3,
+        cvs.height * y + n * CARD_WIDTH / 3,
+        CARD_WIDTH, CARD_HEIGHT
+      );
+    }
+
+    function getReturn(pValue, dValue, natural) {
+      if(pValue === Infinity && dValue !== Infinity) {
+        return natural ? params.blackjack : 1;
+      } else if(pValue > dValue) {
+        return 1;
+      } else if(pValue < dValue || pValue === -1) {
+        return -1;
+      } else {
+        return 0;
+      }
+    }
+
+    // Draw bakcground
+    ctx.fillStyle = '#030';
+    ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+    // Draw info text
+    ctx.fillStyle = '#fff';
+    ctx.font = '42px Noto Sans';
+    let text = `$${game.cash}`;
+    ctx.fillText(text, cvs.width - ctx.measureText(text).width - 20, 62);
+    ctx.font = '32px Noto Sans';
+    ctx.fillText(`${52 * params.count.decks - game.shoe.getSize()} cards discarded`, 20, 52);
+    ctx.fillText(`${game.shoe.getSize()} cards left in shoe`, 20, 84);
+
+    // Draw dealer cards
+    game.dealer.forEach((card, i) => {
+      drawCard(card, .5, .02, i);
+    });
+
+    // Draw player cards
+    game.players.forEach((player, i) => {
+      if(game.active === null || game.active >= 5 || game.active === i) {
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.globalAlpha = .2;
+      }
+      player.forEach((card, j) => {
+        drawCard(card, (i+1)/6 + CARD_WIDTH / cvs.width / 6, .55, j);
+      });
+
+      // Check if player is 21 or bust or not betting
+      if(
+        // One card after ace
+        game.dealCooldown <= 0 &&
+        game.active === i &&
+        (
+          (
+            (game.unfinished[i].length > 0 || game.finished[i].length > 0) &&
+            game.players[i][0] &&
+            (game.players[i][0][0] === 'A' && params.split.oneCardAfterAce) &&
+            game.players[i].length === 2
+          ) ||
+          (!game.betting && game.bets[i] < practiceParams.minimum) ||
+          ((getValue(player) === 21 || getValue(player) === Infinity || getValue(player) === -1) && game.dealCooldown <= 0)
+        )
+      ) {
+        finishHand();
+      }
+    });
+    ctx.globalAlpha = 1;
+
+    // Draw boxes
+    for(let i = 0; i < 5; i++) {
+      let x = cvs.width * (i+1)/6;
+      let y = cvs.height * .9;
+      let r = cvs.height * .05;
+
+      ctx.strokeStyle = '#fff';
+      if(game.active === i) {
+        ctx.lineWidth = 5;
+      } else {
+        ctx.lineWidth = 2;
+      }
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 2*Math.PI);
+      ctx.stroke();
+      ctx.font = '20px Noto Sans';
+      ctx.fillStyle = '#fff';
+      if(game.bets[i] !== 0) {
+        ctx.fillText(
+          game.bets[i],
+          cvs.width * (i+1)/6 - ctx.measureText(game.bets[i]).width / 2,
+          cvs.height * .9 + 8
         );
       }
 
-      ctx.fillStyle = '#030';
-      ctx.fillRect(0, 0, cvs.width, cvs.height);
+      // Hover events
+      let hover = Math.pow(x - mouse.x, 2) + Math.pow(y - mouse.y, 2) < Math.pow(r, 2);
+      if(hover && mouse.down) {
+        pointer = true;
+        game.active = i;
+      } else if(hover) {
+        pointer = true;
+      }
+    }
 
-      // Draw info text
-      ctx.fillStyle = '#fff';
-      ctx.font = '42px Noto Sans';
-      let text = `$${game.cash}`;
-      ctx.fillText(text, cvs.width - ctx.measureText(text).width - 20, 62);
+    // Reset if shoe is too small
+    if(game.shoe.length < 52) {
+      game.reset();
+    }
 
-      // Draw dealer cards
-      game.dealer.forEach((card, i) => {
-        drawCard(card, .5, .02, i);
-      });
-
-      // Draw player cards
+    // Deal if dealing hasn't finished
+    if(!game.betting) {
+      let finishedPlayers = true;
+      let finishedDealing = true;
+      let minSize = Math.min(...game.players.map((player, i) => {
+        if(game.bets[i] < practiceParams.minimum) {
+          return Infinity;
+        } else {
+          return player.length;
+        }
+      }));
       game.players.forEach((player, i) => {
-        if(game.active === null || game.active === 5 || game.active === 6 || game.active === i) {
-          ctx.globalAlpha = 1;
-        } else {
-          ctx.globalAlpha = .2;
-        }
-        player.forEach((card, j) => {
-          if(card === -1) {
-            if(game.dealCooldown <= 0) {
-              game.active++;
-              player.pop();
-            }
-            return;
-          }
-          drawCard(card, (i+1)/6 + CARD_WIDTH / cvs.width / 6, .55, j);
-        });
-
-        // Check if player is 21 or bust or not betting
-        if(
-          game.active === i &&
-          ((!game.betting && game.bets[i] <= practiceParams.minimum) ||
-          ((getValue(player) === 21 || getValue(player) === Infinity || getValue(player) === -1) && game.dealCooldown <= 0))
-        ) {
-          game.active++;
-        }
-      });
-      ctx.globalAlpha = 1;
-
-      // Draw boxes
-      for(let i = 0; i < 5; i++) {
-        let x = cvs.width * (i+1)/6;
-        let y = cvs.height * .9;
-        let r = cvs.height * .05;
-
-        ctx.strokeStyle = '#fff';
-        if(game.active === i) {
-          ctx.lineWidth = 5;
-        } else {
-          ctx.lineWidth = 2;
-        }
-        ctx.beginPath();
-        ctx.arc(x, y, r, 0, 2*Math.PI);
-        ctx.stroke();
-        ctx.font = '20px Noto Sans';
-        ctx.fillStyle = '#fff';
-        if(game.bets[i] !== 0) {
-          ctx.fillText(
-            game.bets[i],
-            cvs.width * (i+1)/6 - ctx.measureText(game.bets[i]).width / 2,
-            cvs.height * .9 + 8
-          );
-        }
-
-        // Hover events
-        let hover = Math.pow(x - mouse.x, 2) + Math.pow(y - mouse.y, 2) < Math.pow(r, 2);
-        if(hover && mouse.down) {
-          pointer = true;
-          game.active = i;
-        } else if(hover) {
-          pointer = true;
-        }
-      }
-
-      // Reset if shoe is too small
-      if(game.shoe.length < 52) {
-        game.reset();
-      }
-
-      // Deal if dealing hasn't finished
-      if(!game.betting) {
-        let finishedPlayers = true;
-        let finishedDealing = true;
-        let minSize = Math.min(...game.players.map((player, i) => {
-          if(game.bets[i] <= practiceParams.minimum) {
-            return Infinity;
-          } else {
-            return player.length;
-          }
-        }));
-        game.players.forEach((player, i) => {
-          if(game.bets[i] && player.length === minSize && minSize < 2) {
-            finishedPlayers = false;
-            finishedDealing = false;
-            if(game.dealCooldown <= 0) {
-              player.push(game.shoe.draw());
-              game.dealCooldown = DEAL_COOLDOWN;
-            }
-          }
-        });
-        if(finishedPlayers && game.dealer.length === 0) {
+        if(game.bets[i] && player.length === minSize && minSize < 2) {
+          finishedPlayers = false;
           finishedDealing = false;
           if(game.dealCooldown <= 0) {
-            game.dealer.push(game.shoe.draw());
-          }
-        }
-        if(game.active === null && finishedDealing && game.dealCooldown <= 0) {
-          game.active = 0;
-        }
-        game.finishedDealing = finishedDealing;
-      }
-
-      // If players are finished, do dealer
-      if(game.active === 5 && game.dealCooldown <= 0) {
-        let value = getValue(game.dealer);
-        if((value < 17 || (params.soft17 && value === 17 && isSoft(game.dealer))) && value !== -1) {
-          game.dealer.push(game.shoe.draw());
-          game.dealCooldown = DEAL_COOLDOWN;
-        } else {
-          game.active++;
-          game.dealCooldown = DEAL_COOLDOWN * 10;
-
-          // Update cash
-          game.players.forEach((player, i) => {
-            if(game.bets[i] <= practiceParams.minimum) return;
-            let pValue = getValue(player);
-            if(pValue === Infinity && value !== Infinity) {
-              game.cash += params.blackjack * game.bets[i];
-            } else if(pValue > value) {
-              game.cash += game.bets[i];
-            } else if((pValue < value || pValue === -1) && game.cash > game.bets[i]) {
-              game.cash -= game.bets[i];
-            } else if(pValue < value || pValue === -1) {
-              game.bets[i] = 0;
-            }
-          });
-        }
-      } else if(game.active === 6 && game.dealCooldown <= 0) {
-        game.reset();
-      }
-
-      if(game.betting) {
-        ctx.fillStyle = '#fff';
-        ctx.font = '96px Noto Sans';
-        let text = 'Click to deal';
-
-        let width = ctx.measureText(text).width;
-        let height = 96;
-        let x = cvs.width / 2 - width / 2;
-        let y = cvs.height * .2;
-        ctx.fillText(text, x, y + height);
-
-        let hover = mouse.x > x && mouse.x < x + width && mouse.y > y && mouse.y < y + height;
-        if(mouse.down && hover) {
-          pointer = true;
-          game.betting = false;
-          game.active = null;
-        } else if(hover) {
-          pointer = true;
-        }
-      }
-
-      if(pointer) {
-        cvs.style.cursor = 'pointer';
-      } else {
-        cvs.style.cursor = 'auto';
-      }
-
-      game.dealCooldown -= delta;
-      window.requestAnimationFrame(frame.bind(this));
-    }
-
-    window.addBet = (bet) => {
-      if(game.betting) {
-        if(bet === 0) {
-          game.cash += game.bets[game.active];
-          game.bets[game.active] = 0;
-        } else {
-          if(game.cash >= bet) {
-            game.cash -= bet;
-            game.bets[game.active] += bet;
-          }
-        }
-      }
-    }
-
-    window.doAction = (action) => {
-      if(game.dealCooldown <= 0 && game.finishedDealing && !game.betting) {
-        switch(action) {
-          case 'Hit':
-            game.players[game.active].push(game.shoe.draw());
+            player.push(game.shoe.draw());
             game.dealCooldown = DEAL_COOLDOWN;
-            break;
-          case 'Stand':
-            game.active++;
-            break;
-          case 'Double':
-            if(game.cash >= game.bets[game.active]) {
-              game.cash -= game.bets[game.active];
-              game.bets[game.active] *= 2;
-              game.players[game.active].push(game.shoe.draw());
-              game.players[game.active].push(-1);
-              game.dealCooldown = DEAL_COOLDOWN;
-            }
-            break;
-          default:
-            break;
+          }
+        }
+      });
+      if(finishedPlayers && game.dealer.length === 0) {
+        finishedDealing = false;
+        if(game.dealCooldown <= 0) {
+          game.dealer.push(game.shoe.draw());
         }
       }
+      if(game.active === null && finishedDealing && game.dealCooldown <= 0) {
+        game.active = 0;
+      }
+      game.finishedDealing = finishedDealing;
     }
+
+    // If players are finished, do dealer
+    if(game.active === 5 && game.dealCooldown <= 0) {
+      let value = getValue(game.dealer);
+      if((value < 17 || (params.soft17 && value === 17 && isSoft(game.dealer))) && value !== -1) {
+        game.dealer.push(game.shoe.draw());
+        game.dealCooldown = DEAL_COOLDOWN;
+      } else {
+        finishHand();
+        game.dealCooldown = DEAL_COOLDOWN * 10;
+
+        // Update cash
+        game.players.forEach((player, i) => {
+          if(game.bets[i] < practiceParams.minimum) return;
+          let change = game.bets[i] * getReturn(getValue(player), value, game.finished[i].length === 0);
+          if(change < -game.cash) {
+            game.bets[i] += change;
+          } else {
+            game.cash += change;
+          }
+        });
+        game.finished.forEach((player, i) => {
+          if(game.bets[i] < practiceParams.minimum) return;
+          player.forEach((hand, j) => {
+            game.cash += game.finishedBets[i][j] * getReturn(getValue(hand), value, false);
+            game.cash += game.finishedBets[i][j];
+          });
+        });
+      }
+    } else if(game.active === 6 && game.dealCooldown <= 0) {
+      game.reset();
+    }
+
+    if(game.betting) {
+      ctx.fillStyle = '#fff';
+      ctx.font = '96px Noto Sans';
+      let text = 'Click to deal';
+
+      let width = ctx.measureText(text).width;
+      let height = 96;
+      let x = cvs.width / 2 - width / 2;
+      let y = cvs.height * .2;
+      ctx.fillText(text, x, y + height);
+
+      let hover = mouse.x > x && mouse.x < x + width && mouse.y > y && mouse.y < y + height;
+      if(mouse.down && hover) {
+        pointer = true;
+        game.betting = false;
+        game.active = null;
+      } else if(hover) {
+        pointer = true;
+      }
+    }
+
+    if(pointer) {
+      cvs.style.cursor = 'pointer';
+    } else {
+      cvs.style.cursor = 'auto';
+    }
+
+    game.dealCooldown -= delta;
+    window.requestAnimationFrame(frame.bind(this));
   }
 
   function loadImages(cb) {
@@ -412,23 +438,6 @@ function Jackfish(params) {
       images[key] = img;
     });
   }
-
-  /*-- Private Variables --*/
-  let practiceParams = {};
-  let comp;
-  let endM, standM, doubleM;
-  let table;
-  let edge, insurance;
-  let simCallback;
-  let loaded = false;
-  let listeners = [];
-
-  // Return matrices. Specifies return given player's hand and dealer's card under perfect play
-  let rM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return without doubling
-  // let rdM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with doubling
-  let rsM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with surrendering
-  let hitM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
-  let splitM = zeroes([DEALER_STATES.length, DEALER_STATES.length]);
 
   /*-- Worker --*/
   // for computationally heavy tasks
@@ -460,6 +469,7 @@ function Jackfish(params) {
     }
   });
 
+  /*-- Private Functions --*/
   function getTable(player, dealer) {
     if(player && dealer) {
       if(dealer === 'A' || dealer === ACE) dealer = DEALER_ACE;
@@ -486,8 +496,6 @@ function Jackfish(params) {
     }
   }
 
-  /*-- High Level Functions --*/
-
   function Shoe() {
     let orderedCards = [];
     for(let i = 0; i < params.count.decks; i++) {
@@ -502,9 +510,14 @@ function Jackfish(params) {
       cards.push(orderedCards[i]);
       orderedCards.splice(i, 1);
     }
+    cards.push('6D', '3D', '2C', 'AC', '6D', 'AS', 'AH');
 
     this.draw = () => {
       return cards.pop();
+    }
+
+    this.getSize = () => {
+      return cards.length;
     }
   }
 
@@ -554,6 +567,76 @@ function Jackfish(params) {
       return true;
     }
     return false;
+  }
+
+  /*-- Global functions --*/
+  window.addBet = (bet) => {
+    if(game.betting) {
+      if(bet === 0) {
+        game.cash += game.bets[game.active];
+        game.bets[game.active] = 0;
+      } else {
+        if(game.cash >= bet) {
+          game.cash -= bet;
+          game.bets[game.active] += bet;
+        }
+      }
+    }
+  }
+
+  window.doAction = (action) => {
+    if(game.dealCooldown <= 0 && game.finishedDealing && !game.betting) {
+      switch(action) {
+        case 'Hit':
+          if(game.players[game.active][0][0] !== 'A' || !params.split.oneCardAfterAce) {
+            game.players[game.active].push(game.shoe.draw());
+            game.dealCooldown = DEAL_COOLDOWN;
+          }
+          break;
+        case 'Stand':
+          finishHand();
+          break;
+        case 'Double':
+          if(
+            (params.double.anytime || game.players[game.active].length === 2) && // Double anytime
+            getValue(game.players[game.active]) >= params.double.min && // Minimum double
+            (
+              params.split.double ||
+              (
+                game.unfinished[game.active].length === 0 &&
+                game.finished[game.active].length === 0
+              ) // Double after split
+            ) &&
+            game.cash >= game.bets[game.active]
+          ) {
+            game.cash -= game.bets[game.active];
+            game.bets[game.active] *= 2;
+            game.players[game.active].push(game.shoe.draw());
+            finishHand();
+          }
+          break;
+        case 'Split':
+          if(
+            game.players[game.active].length === 2 &&
+            getValue([game.players[game.active][0]]) === getValue([game.players[game.active][1]]) &&
+            game.cash >= game.bets[game.active] &&
+            (
+              params.split.resplit ||
+              (game.unfinished[game.active].length === 0 && game.finished[game.active].length === 0)
+            )
+          ) {
+            // Create main hand and side hand
+            game.unfinished[game.active].push([game.players[game.active][1]]);
+            game.unfinishedBets[game.active].push(game.bets[game.active]);
+            game.players[game.active] = [game.players[game.active][0]];
+            game.cash -= game.bets[game.active];
+            game.dealCooldown = DEAL_COOLDOWN;
+          }
+          break;
+        default:
+          break;
+      }
+    }
   }
 
   /*-- General Utility Functions --*/
