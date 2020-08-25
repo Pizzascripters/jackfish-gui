@@ -5,6 +5,14 @@ class Game extends React.Component {
   constructor(props) {
     super(props);
     this.state = {};
+
+    window.grayAction = (action) => {
+      document.getElementById(`button${action}`).className = 'gray';
+    }
+
+    window.activateAction = (action) => {
+      document.getElementById(`button${action}`).className = '';
+    }
   }
 
   act(action) {
@@ -28,11 +36,12 @@ class Game extends React.Component {
         <img src='img/chips/500.png' alt='Bet 500' onClick={this.bet.bind(this, 500)} width='64' height='64' />
       </div>
       <div id='actions'>
-        <button onClick={this.act.bind(this, 'Surrender')}>Surrender</button>
-        <button onClick={this.act.bind(this, 'Stand')}>Stand</button>
-        <button onClick={this.act.bind(this, 'Hit')}>Hit</button>
-        <button onClick={this.act.bind(this, 'Double')}>Double</button>
-        <button onClick={this.act.bind(this, 'Split')}>Split</button>
+        <button id='buttonR' onClick={this.act.bind(this, 'Surrender')}>Surrender</button>
+        <button id='buttonD' onClick={this.act.bind(this, 'Double')}>Double</button>
+        <button id='buttonS' onClick={this.act.bind(this, 'Stand')}>Stand</button>
+        <button id='buttonH' onClick={this.act.bind(this, 'Hit')}>Hit</button>
+        <button id='buttonP' onClick={this.act.bind(this, 'Split')}>Split</button>
+        <button id='buttonI' onClick={this.act.bind(this, 'Insurance')}>Insurance</button>
       </div>
     </div>
   }

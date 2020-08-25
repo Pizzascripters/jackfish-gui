@@ -8,6 +8,15 @@ function Jackfish(params) {
   const DEALER_ACE = -4;
   const ACE = 43;
 
+  const STAGES = {
+    BETTING: 0,
+    DEALING: 1,
+    INSURANCE: 3,
+    PLAYING: 4,
+    REVEALING: 5, // Dealer reveals hole card and then hits
+    WAITING: 6, // Dealer pays players and waits for next hand to start
+  }
+
   // A list of possible hands the player or the dealer can have
   const HAND_STATES = (() => {
     let a = [];
@@ -46,6 +55,7 @@ function Jackfish(params) {
         hrefs[card + suit] = `cards/${card + suit}.png`;
       });
     });
+    hrefs['back'] = 'cards/purple_back.png';
     return hrefs;
   })();
 
@@ -176,8 +186,13 @@ function Jackfish(params) {
         game.players[game.active] = game.unfinished[game.active].pop();
         game.bets[game.active] = game.unfinishedBets[game.active].pop();
       }, DEAL_COOLDOWN);
-    } else {
-      game.active++;
+    } else if(++game.active === 5 && game.stage === STAGES.PLAYING) {
+      game.dealCooldown = DEAL_COOLDOWN;
+      game.active = null;
+      game.stage = STAGES.REVEALING;
+    } else if(game.active === 5 && game.stage === STAGES.INSURANCE) {
+      game.active = 0;
+      game.stage = STAGES.PLAYING;
     }
   }
 
@@ -186,19 +201,30 @@ function Jackfish(params) {
     oldTime = 0;
     game = {
       cash: practiceParams.cash,
+      originalBets: [0, 0, 0, 0, 0],
       bets: [0, 0, 0, 0, 0],
       shoe: new Shoe()
     };
     game.reset = () => {
-      game.betting = true;
+      game.stage = STAGES.BETTING;
       game.dealer = [];
+      game.peeked = false;
+      game.insurance = [false, false, false, false, false];
       game.players = [[], [], [], [], []];
       game.unfinished = [[], [], [], [], []]; // Unfinished side hands; where hands go after a split
       game.finished = [[], [], [], [], []]; // Finished side hands
-      game.unfinishedBets = [[], [], [], [], []];
-      game.finishedBets = [[], [], [], [], []];
+      game.unfinishedBets = [[], [], [], [], []]; // Bets corresponding with game.unfinished
+      game.finishedBets = [[], [], [], [], []]; // Best correspondinng with game.finished
       game.active = 0; // Which player is currently playing
+      game.generalCooldown = 0;
       game.dealCooldown = 0;
+
+      game.originalBets.forEach((bet, i) => {
+        if(game.cash >= bet - game.bets[i]) {
+          game.cash -= bet - game.bets[i];
+          game.bets[i] = bet;
+        }
+      })
     }
     game.reset();
 
@@ -235,7 +261,68 @@ function Jackfish(params) {
       }
     }
 
-    // Draw bakcground
+    // Determine which actions we can take
+    let a = game.dealCooldown <= 0 && game.stage === STAGES.PLAYING;
+    let b = game.dealCooldown <= 0 && game.stage > STAGES.BETTING && game.stage < STAGES.REVEALING;
+    game.canHit = a && (
+      (game.unfinished[game.active].length === 0 && game.finished[game.active].length === 0) ||
+      game.players[game.active][0][0] !== 'A' ||
+      !params.split.oneCardAfterAce
+    );
+    game.canStand = a;
+    game.canDouble = a && (
+      (params.double.anytime || game.players[game.active].length === 2) && // Double anytime
+      getValue(game.players[game.active]) >= params.double.min && // Minimum double
+      (
+        params.split.double ||
+        (
+          game.unfinished[game.active].length === 0 &&
+          game.finished[game.active].length === 0
+        ) // Double after split
+      ) &&
+      game.cash >= game.bets[game.active]
+    );
+    game.canSplit = a && (
+      game.players[game.active].length === 2 &&
+      getValue([game.players[game.active][0]]) === getValue([game.players[game.active][1]]) &&
+      game.cash >= game.bets[game.active] &&
+      game.unfinished[game.active].length + game.finished[game.active].length <= params.split.maxHands - 2 &&
+      (
+        params.split.resplit ||
+        (game.unfinished[game.active].length === 0 && game.finished[game.active].length === 0)
+      )
+    );
+    game.canSurrender = b && (
+        (
+          params.surrender === 'late' &&
+          game.players[game.active].length === 2 &&
+          game.unfinished[game.active].length === 0 &&
+          game.finished[game.active].length === 0 &&
+          game.stage === STAGES.PLAYING
+        ) ||
+        (
+          params.surrender === 'early' &&
+          game.stage === STAGES.INSURANCE
+        )
+    );
+    game.canInsurance = b && (
+      game.stage === STAGES.INSURANCE &&
+      game.cash >= game.bets[game.active] / 2
+    );
+
+    // Gray out buttons
+    const ACTIONS = ['R', 'D', 'S', 'H', 'P', 'I'];
+    let buttons = [game.canSurrender, game.canDouble, game.canStand, game.canHit, game.canSplit, game.canInsurance];
+    buttons.forEach((activated, i) => {
+      if(activated) {
+        window.activateAction(ACTIONS[i]);
+      } else {
+        window.grayAction(ACTIONS[i]);
+      }
+
+    });
+
+    // Draw background
     ctx.fillStyle = '#030';
     ctx.fillRect(0, 0, cvs.width, cvs.height);
 
@@ -250,6 +337,12 @@ function Jackfish(params) {
 
     // Draw dealer cards
     game.dealer.forEach((card, i) => {
+      if(
+        i === 0 &&
+        game.stage < STAGES.REVEALING
+      ) {
+        card = 'back';
+      }
       drawCard(card, .5, .02, i);
     });
 
@@ -270,13 +363,19 @@ function Jackfish(params) {
         game.dealCooldown <= 0 &&
         game.active === i &&
         (
+          // If one card after ace split and can't resplit, skip hand
           (
-            (game.unfinished[i].length > 0 || game.finished[i].length > 0) &&
+            (game.unfinished[i].length > 0 || game.finished[i].length > 0) && // After split
             game.players[i][0] &&
-            (game.players[i][0][0] === 'A' && params.split.oneCardAfterAce) &&
+            game.players[i][1] &&
+            game.players[i][0][0] === 'A' && // First card is ace
+            params.split.oneCardAfterAce &&
+            (game.players[i][1][0] !== 'A' || !params.split.resplitAces) &&
             game.players[i].length === 2
           ) ||
-          (!game.betting && game.bets[i] < practiceParams.minimum) ||
+          // If less than table maximum, skip hand
+          (game.stage > STAGES.BETTING && game.bets[i] < practiceParams.minimum) ||
+          // If 21, bust, or blackjack, skip hand
           ((getValue(player) === 21 || getValue(player) === Infinity || getValue(player) === -1) && game.dealCooldown <= 0)
         )
       ) {
@@ -291,7 +390,7 @@ function Jackfish(params) {
       let y = cvs.height * .9;
       let r = cvs.height * .05;
 
-      ctx.strokeStyle = '#fff';
+      ctx.strokeStyle = game.insurance[i] ? '#f77' : '#fff';
       if(game.active === i) {
         ctx.lineWidth = 5;
       } else {
@@ -310,13 +409,15 @@ function Jackfish(params) {
         );
       }
 
-      // Hover events
-      let hover = Math.pow(x - mouse.x, 2) + Math.pow(y - mouse.y, 2) < Math.pow(r, 2);
-      if(hover && mouse.down) {
-        pointer = true;
-        game.active = i;
-      } else if(hover) {
-        pointer = true;
+      // Hover and clicking events
+      if(game.stage === STAGES.BETTING) {
+        let hover = Math.pow(x - mouse.x, 2) + Math.pow(y - mouse.y, 2) < Math.pow(r, 2);
+        if(hover && mouse.down) {
+          pointer = true;
+          game.active = i;
+        } else if(hover) {
+          pointer = true;
+        }
       }
     }
 
@@ -326,7 +427,7 @@ function Jackfish(params) {
     }
 
     // Deal if dealing hasn't finished
-    if(!game.betting) {
+    if(game.stage === STAGES.DEALING) {
       let finishedPlayers = true;
       let finishedDealing = true;
       let minSize = Math.min(...game.players.map((player, i) => {
@@ -336,8 +437,13 @@ function Jackfish(params) {
           return player.length;
         }
       }));
+      // Deal to each player
       game.players.forEach((player, i) => {
-        if(game.bets[i] && player.length === minSize && minSize < 2) {
+        if(
+          game.bets[i] >= practiceParams.minimum && // Must be betting at least table minimum
+          player.length === minSize && // Deal if we have the smallest hand
+          minSize < 2 // Smallest hand must be less than 2 cards, else we're done dealing
+        ) {
           finishedPlayers = false;
           finishedDealing = false;
           if(game.dealCooldown <= 0) {
@@ -346,36 +452,70 @@ function Jackfish(params) {
           }
         }
       });
-      if(finishedPlayers && game.dealer.length === 0) {
+      // Deal to dealer
+      if(finishedPlayers && game.dealer.length < 2) {
         finishedDealing = false;
         if(game.dealCooldown <= 0) {
+          game.dealCooldown = DEAL_COOLDOWN;
           game.dealer.push(game.shoe.draw());
         }
       }
-      if(game.active === null && finishedDealing && game.dealCooldown <= 0) {
-        game.active = 0;
+
+      if(game.stage === STAGES.DEALING && finishedDealing && game.dealCooldown <= 0) {
+        if(game.dealer[1][0] === 'A' || params.surrender === 'early') {
+          game.active = 0;
+          game.stage = STAGES.INSURANCE;
+          game.generalCooldown = DEAL_COOLDOWN * 10;
+        } else if(params.peek && getValue(game.dealer) === Infinity) {
+          // Peek cards
+          game.stage = STAGES.REVEALING;
+          game.active = null;
+        } else {
+          game.active = 0;
+          game.stage = STAGES.PLAYING;
+        }
       }
-      game.finishedDealing = finishedDealing;
+    }
+
+    // Draw second card after split
+    if(game.stage === STAGES.PLAYING) {
+      if(
+        game.players[game.active].length === 1 &&
+        game.dealCooldown <= 0
+      ) {
+        game.players[game.active].push(game.shoe.draw());
+        game.dealCooldown = DEAL_COOLDOWN;
+      }
+    }
+
+    // Early surrendering and insurance expires
+    if(
+      (game.stage === STAGES.INSURANCE) &&
+      game.bets[game.active] >= practiceParams.minimum &&
+      game.generalCooldown <= 0
+    ) {
+      finishHand();
+      game.generalCooldown = DEAL_COOLDOWN * 10;
     }
 
     // If players are finished, do dealer
-    if(game.active === 5 && game.dealCooldown <= 0) {
+    if(game.stage === STAGES.REVEALING && game.dealCooldown <= 0) {
       let value = getValue(game.dealer);
       if((value < 17 || (params.soft17 && value === 17 && isSoft(game.dealer))) && value !== -1) {
         game.dealer.push(game.shoe.draw());
         game.dealCooldown = DEAL_COOLDOWN;
       } else {
-        finishHand();
+        game.stage = STAGES.WAITING;
         game.dealCooldown = DEAL_COOLDOWN * 10;
 
         // Update cash
         game.players.forEach((player, i) => {
           if(game.bets[i] < practiceParams.minimum) return;
           let change = game.bets[i] * getReturn(getValue(player), value, game.finished[i].length === 0);
-          if(change < -game.cash) {
-            game.bets[i] += change;
-          } else {
-            game.cash += change;
+          game.bets[i] += change;
+
+          if(game.insurance[i] && getValue(game.dealer) === Infinity) {
+            game.bets[i] += 2 * game.insurance[i];
           }
         });
         game.finished.forEach((player, i) => {
@@ -386,11 +526,11 @@ function Jackfish(params) {
           });
         });
       }
-    } else if(game.active === 6 && game.dealCooldown <= 0) {
+    } else if(game.stage === STAGES.WAITING && game.dealCooldown <= 0) {
       game.reset();
     }
 
-    if(game.betting) {
+    if(game.stage === STAGES.BETTING) {
       ctx.fillStyle = '#fff';
       ctx.font = '96px Noto Sans';
       let text = 'Click to deal';
@@ -404,7 +544,7 @@ function Jackfish(params) {
       let hover = mouse.x > x && mouse.x < x + width && mouse.y > y && mouse.y < y + height;
       if(mouse.down && hover) {
         pointer = true;
-        game.betting = false;
+        game.stage = STAGES.DEALING;
         game.active = null;
       } else if(hover) {
         pointer = true;
@@ -418,6 +558,7 @@ function Jackfish(params) {
     }
 
     game.dealCooldown -= delta;
+    game.generalCooldown -= delta;
     window.requestAnimationFrame(frame.bind(this));
   }
 
@@ -510,7 +651,6 @@ function Jackfish(params) {
       cards.push(orderedCards[i]);
       orderedCards.splice(i, 1);
     }
-    cards.push('6D', '3D', '2C', 'AC', '6D', 'AS', 'AH');
 
     this.draw = () => {
       return cards.pop();
@@ -571,71 +711,66 @@ function Jackfish(params) {
 
   /*-- Global functions --*/
   window.addBet = (bet) => {
-    if(game.betting) {
+    if(game.stage === STAGES.BETTING) {
       if(bet === 0) {
         game.cash += game.bets[game.active];
         game.bets[game.active] = 0;
+        game.originalBets[game.active] = 0;
       } else {
         if(game.cash >= bet) {
           game.cash -= bet;
           game.bets[game.active] += bet;
+          game.originalBets[game.active] += bet;
         }
       }
     }
   }
 
   window.doAction = (action) => {
-    if(game.dealCooldown <= 0 && game.finishedDealing && !game.betting) {
-      switch(action) {
-        case 'Hit':
-          if(game.players[game.active][0][0] !== 'A' || !params.split.oneCardAfterAce) {
-            game.players[game.active].push(game.shoe.draw());
-            game.dealCooldown = DEAL_COOLDOWN;
-          }
-          break;
-        case 'Stand':
+    switch(action) {
+      case 'Hit':
+        if(game.canHit) {
+          game.players[game.active].push(game.shoe.draw());
+          game.dealCooldown = DEAL_COOLDOWN;
+        }
+        break;
+      case 'Stand':
+        finishHand();
+        break;
+      case 'Double':
+        if(game.canDouble) {
+          game.cash -= game.bets[game.active];
+          game.bets[game.active] *= 2;
+          game.players[game.active].push(game.shoe.draw());
           finishHand();
-          break;
-        case 'Double':
-          if(
-            (params.double.anytime || game.players[game.active].length === 2) && // Double anytime
-            getValue(game.players[game.active]) >= params.double.min && // Minimum double
-            (
-              params.split.double ||
-              (
-                game.unfinished[game.active].length === 0 &&
-                game.finished[game.active].length === 0
-              ) // Double after split
-            ) &&
-            game.cash >= game.bets[game.active]
-          ) {
-            game.cash -= game.bets[game.active];
-            game.bets[game.active] *= 2;
-            game.players[game.active].push(game.shoe.draw());
-            finishHand();
-          }
-          break;
-        case 'Split':
-          if(
-            game.players[game.active].length === 2 &&
-            getValue([game.players[game.active][0]]) === getValue([game.players[game.active][1]]) &&
-            game.cash >= game.bets[game.active] &&
-            (
-              params.split.resplit ||
-              (game.unfinished[game.active].length === 0 && game.finished[game.active].length === 0)
-            )
-          ) {
-            // Create main hand and side hand
-            game.unfinished[game.active].push([game.players[game.active][1]]);
-            game.unfinishedBets[game.active].push(game.bets[game.active]);
-            game.players[game.active] = [game.players[game.active][0]];
-            game.cash -= game.bets[game.active];
-            game.dealCooldown = DEAL_COOLDOWN;
-          }
-          break;
-        default:
-          break;
-      }
+        }
+        break;
+      case 'Split':
+        if(game.canSplit) {
+          // Create main hand and side hand
+          game.unfinished[game.active].push([game.players[game.active][1]]);
+          game.unfinishedBets[game.active].push(game.bets[game.active]);
+          game.players[game.active] = [game.players[game.active][0]];
+          game.cash -= game.bets[game.active];
+          game.dealCooldown = DEAL_COOLDOWN;
+        }
+        break;
+      case 'Surrender':
+        if(game.canSurrender) {
+          game.cash += game.bets[game.active] / 2;
+          game.bets[game.active] = 0;
+        }
+        break;
+      case 'Insurance':
+        if(game.canInsurance) {
+          game.insurance[game.active] = game.bets[game.active] / 2;
+          game.cash -= game.bets[game.active] / 2;
+          finishHand();
+          game.generalCooldown = DEAL_COOLDOWN * 10;
+        }
+        break;
+      default:
+        break;
     }
   }
 

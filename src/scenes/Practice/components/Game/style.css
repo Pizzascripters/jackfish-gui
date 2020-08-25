@@ -36,3 +36,9 @@
 #chips img:hover {
   cursor: pointer;
 }
+
+button.gray {
+  background-color: #666 !important;
+  color: #bbb;
+  cursor: auto !important;
+}

@@ -55,17 +55,6 @@ getParam('Resplit').on('Allowed', () => {
     getParam('Max Hands').set('Unlimited', true);
   }
 });
-// No peek with late surrender is a contradiction
-getParam('Peek Aces and Tens').on(false, () => {
-  if(getParam('Surrender').value === 'Late') {
-    getParam('Surrender').set('Early', true);
-  }
-});
-getParam('Surrender').on('Late', () => {
-  if(getParam('Peek Aces and Tens').value === false) {
-    getParam('Peek Aces and Tens').set(true, true);
-  }
-});
 getParam('System').on('None', () => {
   getParam('True Count').setVisibility(false);
   getParam('Count').setVisibility(false);
@@ -251,7 +240,7 @@ function update(f) {
       maxHands: maxHands,
       oneCardAfterAce: getParam('One Card After Ace Split').value,
       resplit: getParam('Resplit').value !== 'Never',
-      resplitAces: getParam('Resplit').value !== 'No Aces',
+      resplitAces: getParam('Resplit').value === 'Allowed',
     },
   });
 }
