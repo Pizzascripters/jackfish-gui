@@ -199,12 +199,15 @@ function Jackfish(params) {
   function startFrameCycle(images_) {
     images = images_;
     oldTime = 0;
-    game = {
-      cash: practiceParams.cash,
-      originalBets: [0, 0, 0, 0, 0],
-      bets: [0, 0, 0, 0, 0],
-      shoe: new Shoe()
-    };
+    game = {};
+    game.new = () => {
+      game.cash = practiceParams.cash;
+      game.originalBets = [0, 0, 0, 0, 0];
+      game.bets = [0, 0, 0, 0, 0];
+      game.decks = params.count.decks;
+      game.shoe = new Shoe();
+      game.reset();
+    }
     game.reset = () => {
       game.stage = STAGES.BETTING;
       game.dealer = [];
@@ -224,9 +227,14 @@ function Jackfish(params) {
           game.cash -= bet - game.bets[i];
           game.bets[i] = bet;
         }
-      })
+      });
+
+      // Reset if shoe is too small
+      if(game.shoe.getSize() < 52 * practiceParams.penetration) {
+        game.shoe = new Shoe();
+      }
     }
-    game.reset();
+    game.new();
 
     frame.bind(this)(0);
   }
@@ -332,7 +340,7 @@ function Jackfish(params) {
     let text = `$${game.cash}`;
     ctx.fillText(text, cvs.width - ctx.measureText(text).width - 20, 62);
     ctx.font = '32px Noto Sans';
-    ctx.fillText(`${52 * params.count.decks - game.shoe.getSize()} cards discarded`, 20, 52);
+    ctx.fillText(`${52 * game.decks - game.shoe.getSize()} cards discarded`, 20, 52);
     ctx.fillText(`${game.shoe.getSize()} cards left in shoe`, 20, 84);
 
     // Draw dealer cards
@@ -419,11 +427,6 @@ function Jackfish(params) {
           pointer = true;
         }
       }
-    }
-
-    // Reset if shoe is too small
-    if(game.shoe.length < 52) {
-      game.reset();
     }
 
     // Deal if dealing hasn't finished
@@ -772,6 +775,10 @@ function Jackfish(params) {
       default:
         break;
     }
+  }
+
+  window.newGame = () => {
+    game.new();
   }
 
   /*-- General Utility Functions --*/

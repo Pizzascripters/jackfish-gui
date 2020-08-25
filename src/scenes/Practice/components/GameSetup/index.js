@@ -10,6 +10,7 @@ class GameSetup extends React.Component {
     this.boxes = this.props.boxes;
     this.cash = this.props.cash;
     this.minimum = this.props.minimum;
+    this.penetration = this.props.penetration;
   }
 
   onChangeBox(i, state) {
@@ -27,11 +28,17 @@ class GameSetup extends React.Component {
     this.onChange.bind(this)();
   }
 
+  onChangePenetration(value) {
+    this.penetration = value;
+    this.onChange.bind(this)();
+  }
+
   onChange() {
     this.props.onChange({
       boxes: this.boxes,
       cash: this.cash,
-      minimum: this.minimum
+      minimum: this.minimum,
+      penetration: this.penetration
     })
   }
 
@@ -45,7 +52,8 @@ class GameSetup extends React.Component {
       <BoxConfig number='5' onChange={this.onChangeBox.bind(this, 4)} box={this.boxes[4]}/><br />
       Starting Cash: $<Num value={this.cash} onChange={this.onChangeCash.bind(this)} /><br />
       Table Minimum: $<Num value={this.minimum} onChange={this.onChangeMinimum.bind(this)} /><br />
-      <button className='bigButton'>New Game</button>
+      Deck Penetration: <Num value={this.penetration} onChange={this.onChangePenetration.bind(this)} /><br />
+      <button className='bigButton' onClick={window.newGame}>New Game</button>
     </div>;
   }
 }

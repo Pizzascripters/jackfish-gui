@@ -15,6 +15,7 @@ class Practice extends React.Component {
     for(let i = 0; i < 5; i++) this.boxes.push({ai: false, difficulty: 'Basic Strategy'});
     this.cash = 1000;
     this.minimum = 10;
+    this.penetration = 1;
   }
 
   updateEngine(params) {
@@ -30,10 +31,12 @@ class Practice extends React.Component {
     this.boxes = setup.boxes;
     this.cash = setup.cash;
     this.minimum = setup.minimum;
+    this.penetration = setup.penetration;
     this.jackfish.setPracticeParams({
       boxes: this.boxes,
       cash: this.cash,
-      minimum: this.minimum
+      minimum: this.minimum,
+      penetration: this.penetration
     })
   }
 
@@ -51,6 +54,7 @@ class Practice extends React.Component {
               boxes={this.boxes}
               cash={this.cash}
               minimum={this.minimum}
+              penetration={this.penetration}
             />;
           } else if(i === 1) {
             return null;
