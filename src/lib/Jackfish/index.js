@@ -107,8 +107,6 @@ let splitM = zeroes([DEALER_STATES.length, DEALER_STATES.length]);
 function Jackfish(params_) {
   params = params_;
 
-  window.addEventListener('load', startPractice.bind(this));
-
   /*-- Public Functions --*/
 
   // Positive number indicates player has an edge
@@ -240,7 +238,7 @@ worker.addEventListener('message', e => {
 });
 
 /*-- Practice --*/
-function startPractice(e) {
+window.startPractice = (jackfish) => {
   cvs = document.getElementById('cvs');
   if(cvs) {
     mouse = {};
@@ -256,6 +254,7 @@ function startPractice(e) {
     });
 
     function setSize() {
+      if(cvs === null) return;
       cvs.width = cvs.clientWidth;
       cvs.height = cvs.clientHeight;
     }
@@ -263,7 +262,7 @@ function startPractice(e) {
     setSize();
 
     ctx = cvs.getContext('2d');
-    loadImages(startFrameCycle.bind(this));
+    loadImages(startFrameCycle.bind(jackfish));
   }
 }
 
@@ -958,7 +957,10 @@ function frame(time) {
 
   game.dealCooldown -= delta;
   game.generalCooldown -= delta;
-  window.requestAnimationFrame(frame.bind(this));
+
+  if(document.getElementById('cvs') !== null) {
+    window.requestAnimationFrame(frame.bind(this));
+  }
 }
 
 // A shoe that keeps count
@@ -980,7 +982,6 @@ function Shoe(jackfish) {
     cards.push(orderedCards[i]);
     orderedCards.splice(i, 1);
   }
-  cards.push('AD', '2C', 'AD', 'KD', 'AD', '7H', 'KD', '6C');
 
   this.draw = () => {
     let card = cards.pop();

@@ -90,10 +90,15 @@ function Divider(props) {
 class Table extends React.Component  {
   constructor(props) {
     super(props);
-    props.jackfish.addListener(() => {
+    this.jackfishListener = () => {
       if(this.mounted) this.forceUpdate();
-    });
+    }
+    props.jackfish.addListener(this.jackfishListener);
     this.state = {selection: null};
+  }
+
+  componentWillUnmount() {
+    this.props.jackfish.removeListener(this.jackfishListener);
   }
 
   componentDidMount() {

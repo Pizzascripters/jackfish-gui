@@ -41,6 +41,10 @@ class Practice extends React.Component {
     })
   }
 
+  componentDidMount() {
+    window.startPractice(this.jackfish);
+  }
+
   render() {
     return <div id='practice'>
       <Parameters
