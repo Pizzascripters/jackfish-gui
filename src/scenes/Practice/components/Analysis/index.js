@@ -11,6 +11,9 @@ let system = 'None',
     bestMove = null,
     insurance = false;
 
+let perfectEdge = null,
+    perfectBestMove = null;
+
 window.updateCount = (system_, count_, trueCount_, edge_, bestMove_, insurance_) => {
   system = system_;
   count = count_;
@@ -47,6 +50,11 @@ window.updateCount = (system_, count_, trueCount_, edge_, bestMove_, insurance_)
   }
 }
 
+window.updatePerfect = (edge, bestMove) => {
+  perfectEdge = edge;
+  perfectBestMove = bestMove;
+}
+
 class Analysis extends React.Component {
   constructor(props) {
     super(props);
@@ -75,7 +83,10 @@ function Count(props) {
   let systemText = `System: ${system}`;
   let countText = <span className='count'>{`Count: ${count}`}</span>;
   let tcText = <span className='trueCount'>{`True Count: ${trueCount}`}</span>;
-  let edgeText = <span className='edge'>Edge: {formatPercent(edge, true)}</span>;
+  let edgeText = <span className='edge'>Edge: Calculating...</span>
+  if(edge) {
+    edgeText = <span className='edge'>Edge: {formatPercent(edge, true)}</span>;
+  }
 
   let bestMoveText = <span className='bestMove'>Best Move: N/A</span>;
   if(bestMove) {
@@ -98,9 +109,16 @@ function Count(props) {
   }
 }
 
-  function Perfect(props) {
-  let edgeText = <span className='edge'>Edge: Calculating...</span>;
+function Perfect(props) {
+  let edgeText = <span className='edge'>Edge: Calculating...</span>
+  if(edge) {
+    edgeText = <span className='edge'>Edge: {formatPercent(perfectEdge, true)}</span>;
+  }
+
   let bestMoveText = <span className='bestMove'>Best Move: N/A</span>;
+  if(bestMove) {
+    bestMoveText = <span className='bestMove'>Best Move: {formatMove(perfectBestMove)}</span>;
+  }
   return <div id='perfect'>
     <div>Perfect System</div>
     {edgeText} <br />

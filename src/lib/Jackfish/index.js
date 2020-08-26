@@ -91,6 +91,12 @@ let edge, insurance;
 let simCallback;
 let loaded = false;
 let listeners = [];
+let countTableRequested = false,
+    perfectTableRequested = false,
+    countEdge = null,
+    perfectEdge = null,
+    countTable = null,
+    perfectTable = null;
 let cvs, ctx,
   oldTime = 0,
   images = {},
@@ -311,8 +317,6 @@ function generateAITables(hilo, omega, cb) {
   makingAITables = true;
   aiTables = {};
 
-  let originalCount = deepCopy(params.count);
-
   let tc = -7;
   let system = 'hilo';
 
@@ -333,7 +337,6 @@ function generateAITables(hilo, omega, cb) {
       if(cb) {
         cb();
       }
-      params.count = originalCount;
       return;
     }
 
@@ -358,14 +361,13 @@ function generateAITables(hilo, omega, cb) {
       params.count = {
         system,
         tc,
-        count: tc * originalCount.decks / 2,
-        decks: originalCount.decks / 2
+        count: tc * game.count.decks / 2,
+        decks: game.count.decks / 2
       };
       this.setParams(params);
     }
   }
-
-  params.count = originalCount;
+  makeTable.bind(this)();
 }
 
 function startFrameCycle(images_) {
@@ -373,10 +375,11 @@ function startFrameCycle(images_) {
   oldTime = 0;
   game = {};
   game.new = () => {
+    game.count = deepCopy(params.count);
     game.cash = practiceParams.cash;
     game.originalBets = [0, 0, 0, 0, 0];
     game.bets = [0, 0, 0, 0, 0];
-    game.decks = params.count.decks;
+    game.decks = game.count.decks;
     game.shoe = new Shoe(this);
     game.boxes = [];
 
@@ -674,25 +677,76 @@ function frame(time) {
   ctx.fillText(`${52 * game.decks - game.shoe.getSize()} cards discarded`, 20, 52);
   ctx.fillText(`${game.shoe.getSize()} cards left in shoe`, 20, 84);
 
-  // Determine best move given count system
-  let bestMove = null;
+  // Generate count and perfect tables
+  if(countEdge === null) {
+    if(!countTableRequested) {
+      if(!makingAITables) {
+        params.count.system = game.count.system;
+
+        let listener = onTableCreate.bind(this);
+        function onTableCreate() {
+          countEdge = edge;
+          countTable = deepCopy(table);
+          countTableRequested = false;
+          this.removeListener(listener);
+        }
+        countTableRequested = true;
+        this.setParams(params);
+        this.addListener(listener);
+      }
+    }
+  } else if(perfectEdge === null) {
+    if(!perfectTableRequested) {
+      params.count = {
+        system: 'perfect',
+        comp: game.shoe.getComp(),
+        count: params.count.count,
+        tc: params.count.tc,
+        decks: params.count.decks
+      }
+
+      let listener = onTableCreate.bind(this);
+      function onTableCreate() {
+        perfectEdge = edge;
+        perfectTable = deepCopy(table);
+        perfectTableRequested = false;
+        this.removeListener(listener);
+      }
+      perfectTableRequested = true;
+      this.setParams(params);
+      this.addListener(listener);
+    }
+  }
+
+  // Determine best moves
+  let countBestMove = null;
+  let perfectBestMove = null;
   if(game.active !== null) {
     let hand = getHand(game.players[game.active]);
     let tableIndex = TABLE_HANDS.indexOf(hand);
     let dealerIndex = DEALER_STATES.indexOf(getDealer(game.dealer));
     if(tableIndex !== -1 && dealerIndex !== -1) {
-      bestMove = table[tableIndex][dealerIndex].action;
+      if(countTable !== null) {
+        countBestMove = countTable[tableIndex][dealerIndex].action;
+      }
+      if(perfectTable !== null) {
+        perfectBestMove = perfectTable[tableIndex][dealerIndex].action;
+      }
     }
   }
 
   // Update count in analysis
   window.updateCount(
-    params.count.system,
+    game.count.system,
     game.shoe.getCount(),
     Math.round(10 * game.shoe.getTrueCount()) / 10,
-    edge,
-    bestMove,
+    countEdge,
+    countBestMove,
     this.takeInsurance()
+  );
+  window.updatePerfect(
+    perfectEdge,
+    perfectBestMove
   );
 
   // Draw dealer cards
@@ -969,8 +1023,11 @@ function Shoe(jackfish) {
   let hilo = 0;
   let omega2 = 0;
 
+  let comp = fillArray(4 * game.count.decks, 10);
+  comp[CARD_STATES.indexOf(10)] *= 4;
+
   let orderedCards = [];
-  for(let i = 0; i < params.count.decks; i++) {
+  for(let i = 0; i < game.count.decks; i++) {
     IMAGE_KEYS.forEach(card => {
       orderedCards.push(card);
     });
@@ -985,11 +1042,12 @@ function Shoe(jackfish) {
 
   this.draw = () => {
     let card = cards.pop();
-    if(params.count.system !== 'none') {
-      const INDICES = SYSTEM_NAMES[params.count.system];
+    if(game.count.system !== 'none') {
+      const INDICES = SYSTEM_NAMES[game.count.system];
       count += INDICES[getCardIndex(card)];
       hilo += HILO[getCardIndex(card)];
       omega2 += OMEGA2[getCardIndex(card)];
+      comp[getCardIndex(card)]--; // Update comp
       updateCount();
     }
     return card;
@@ -1015,13 +1073,16 @@ function Shoe(jackfish) {
     return 52 * omega2 / cards.length;
   }
 
+  this.getComp = () => vnormalize(comp);
+
   function updateCount() {
     params.count.count = count;
     params.count.tc = 52 * count / cards.length;
     params.count.decks = cards.length / 52;
-    if(!makingAITables) {
-      jackfish.setParams(params);
-    }
+    countEdge = null;
+    perfectEdge = null;
+    countTable = null;
+    perfectTable = null;
   }
   updateCount();
 }
@@ -1294,6 +1355,20 @@ function zeroes(dims) {
   } else {
     return fillArray(zeroes.bind(null, dims.slice(1)), dims[0]);
   }
+}
+
+/*-- Mathy Utility Functions --*/
+
+function vnormalize(u) {
+  return vscale(u, 1/vtotal(u));
+}
+
+function vtotal(u) {
+  return u.reduce((r, x) => r + x, 0);
+}
+
+function vscale(u, c) {
+  return u.map((x, i) => x * c);
 }
 
 export default Jackfish;

@@ -1073,6 +1073,10 @@ function Jackfish(cb, params) {
   }
 
   function countingComp(count) {
+    if(count.system === 'perfect') {
+      return count.comp;
+    }
+
     let comp = [];
     let negatives = 0;
     let positives = 0;
@@ -1188,6 +1192,11 @@ function Jackfish(cb, params) {
   /*-- General Utility Functions --*/
 
   function deepCompare(obj1, obj2) {
+    if(
+      obj1 !== undefined && obj2 === undefined ||
+      obj1 === undefined && obj2 !== undefined
+    ) return false;
+
     let propertiesMatch = true;
     Object.keys(obj1).forEach((key) => {
       if(typeof obj1[key] === 'object') {
@@ -1321,6 +1330,10 @@ function Jackfish(cb, params) {
   }
 
   /*-- Mathy Utility Functions --*/
+
+  function vnormalize(u) {
+    return vscale(u, 1/vtotal(u));
+  }
 
   function vtotal(u) {
     return u.reduce((r, x) => r + x, 0);
