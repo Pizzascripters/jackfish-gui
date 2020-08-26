@@ -96,7 +96,9 @@ let countTableRequested = false,
     countEdge = null,
     perfectEdge = null,
     countTable = null,
-    perfectTable = null;
+    perfectTable = null,
+    countInsurance = null,
+    perfectInsurance = null;
 let cvs, ctx,
   oldTime = 0,
   images = {},
@@ -462,27 +464,35 @@ function frame(time) {
     }
   }
 
-  function playAI(level, getBet) {
+  function playAI(level, getBet, getInsurance) {
     let move;
     switch(level) {
       case 'Basic Strategy':
-        move = aiBasic(getBet);
+        move = aiBasic(getBet, getInsurance);
         break;
       case 'Casual Counter':
-        move = aiCasual(getBet);
+        move = aiCasual(getBet, getInsurance);
         break;
       case 'Advanced Counter':
-        move = aiAdvanced(getBet);
+        move = aiAdvanced(getBet, getInsurance);
         break;
       case 'Perfect':
-        move = aiPerfect(getBet);
+        move = aiPerfect(getBet, getInsurance);
         break;
       case 'Novice':
+        move = aiNovice(getBet, getInsurance);
+        break;
       default:
-        move =  aiNovice(getBet);
+        move = null;
     }
     if(getBet) {
       return move;
+    }
+    if(getInsurance) {
+      if(move) {
+        window.doAction('Insurance', true);
+      }
+      return;
     }
     switch(move) {
       case 'P':
@@ -504,15 +514,18 @@ function frame(time) {
         window.doAction('Hit', true);
         break;
       case 'S':
-      default:
         window.doAction('Stand', true);
         break;
+      default:
     }
   }
 
-  function aiNovice(getBet) {
+  function aiNovice(getBet, getInsurance) {
     if(getBet) {
       return 10;
+    }
+    if(getInsurance) {
+      return false;
     }
     let player = getValue(game.players[game.active]);
     let dealer = getValue(game.dealer);
@@ -528,14 +541,18 @@ function frame(time) {
     }
   }
 
-  function aiBasic(getBet) {
+  function aiBasic(getBet, getInsurance) {
     if(getBet) {
       return 10;
+    }
+    if(getInsurance) {
+      return false;
     }
     return playTable(aiTables['hilo'][0]);
   }
 
-  function aiCasual(getBet) {
+  function aiCasual(getBet, getInsurance) {
+    if(getInsurance) console.log(game.active)
     if(getBet) {
       if(game.shoe.getHiLo() > 6) {
         return 120;
@@ -546,6 +563,9 @@ function frame(time) {
       } else {
         return 10;
       }
+    }
+    if(getInsurance) {
+      return game.shoe.getHiLo() >= 3;
     }
 
     let closest = null;
@@ -560,7 +580,7 @@ function frame(time) {
     return playTable(closest);
   }
 
-  function aiAdvanced(getBet) {
+  function aiAdvanced(getBet, getInsurance) {
     if(getBet) {
       if(game.shoe.getOmega2() > 6) {
         return 600;
@@ -573,6 +593,9 @@ function frame(time) {
       } else {
         return 100;
       }
+    }
+    if(getInsurance) {
+      return game.shoe.getOmega2() > 4;
     }
 
     let closest = null;
@@ -587,8 +610,24 @@ function frame(time) {
     return playTable(closest);
   }
 
-  function aiPerfect(getBet) {
-
+  function aiPerfect(getBet, getInsurance) {
+    if(getInsurance) {
+      return game.shoe.getComp()[8] >= 1/3;
+    }
+    if(perfectTable !== null) {
+      if(getBet) {
+        if(perfectEdge > 0) {
+          return 20 + Math.floor(perfectEdge * 200) * 10
+        } else {
+          return 10;
+        }
+      }
+      return playTable(perfectTable);
+    } else if(getBet) {
+      return 10;
+    } else {
+      return null;
+    }
   }
 
   function playTable(t) {
@@ -686,6 +725,7 @@ function frame(time) {
         let listener = onTableCreate.bind(this);
         function onTableCreate() {
           countEdge = edge;
+          countInsurance = insurance;
           countTable = deepCopy(table);
           countTableRequested = false;
           this.removeListener(listener);
@@ -708,9 +748,11 @@ function frame(time) {
       let listener = onTableCreate.bind(this);
       function onTableCreate() {
         perfectEdge = edge;
+        perfectInsurance = insurance;
         perfectTable = deepCopy(table);
         perfectTableRequested = false;
         this.removeListener(listener);
+        params.count = deepCopy(game.count);
       }
       perfectTableRequested = true;
       this.setParams(params);
@@ -742,11 +784,12 @@ function frame(time) {
     Math.round(10 * game.shoe.getTrueCount()) / 10,
     countEdge,
     countBestMove,
-    this.takeInsurance()
+    countInsurance
   );
   window.updatePerfect(
     perfectEdge,
-    perfectBestMove
+    perfectBestMove,
+    perfectInsurance
   );
 
   // Draw dealer cards
@@ -866,7 +909,9 @@ function frame(time) {
 
   // AI playing
   if(game.stage === STAGES.PLAYING && game.boxes[game.active].ai) {
-    playAI(game.boxes[game.active].difficulty)
+    playAI(game.boxes[game.active].difficulty);
+  } else if(game.stage === STAGES.INSURANCE && game.boxes[game.active].ai) {
+    playAI(game.boxes[game.active].difficulty, false, true);
   }
 
   // Deal if dealing hasn't finished
@@ -910,6 +955,8 @@ function frame(time) {
         game.stage = STAGES.INSURANCE;
         if(!game.boxes[0].ai) {
           game.generalCooldown = DEAL_COOLDOWN * 10;
+        } else {
+          game.generalCooldown = DEAL_COOLDOWN;
         }
       } else if(params.peek && getValue(game.dealer) === Infinity) {
         // Peek cards
@@ -943,7 +990,7 @@ function frame(time) {
     if(game.active !== 4 && !game.boxes[game.active].ai) {
       game.generalCooldown = DEAL_COOLDOWN * 10;
     } else {
-      game.generalCooldown = 0;
+      game.generalCooldown = DEAL_COOLDOWN;
     }
   }
 
@@ -1166,7 +1213,7 @@ window.doAction = (action, ai) => {
         if(game.active !== 4 && !game.boxes[game.active].ai) {
           game.generalCooldown = DEAL_COOLDOWN * 10;
         } else {
-          game.generalCooldown = 0;
+          game.generalCooldown = DEAL_COOLDOWN;
         }
       }
       break;

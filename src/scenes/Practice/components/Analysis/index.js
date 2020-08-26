@@ -12,7 +12,8 @@ let system = 'None',
     insurance = false;
 
 let perfectEdge = null,
-    perfectBestMove = null;
+    perfectBestMove = null,
+    perfectInsurance = null;
 
 window.updateCount = (system_, count_, trueCount_, edge_, bestMove_, insurance_) => {
   system = system_;
@@ -22,7 +23,7 @@ window.updateCount = (system_, count_, trueCount_, edge_, bestMove_, insurance_)
   bestMove = bestMove_;
   insurance = insurance_;
 
-  // Make firrst character capital
+  // Make first character capital
   if(/^[a-z]*$/.test(system[0])) {
     system = system[0].toLocaleUpperCase() + system.substring(1);
   }
@@ -50,9 +51,10 @@ window.updateCount = (system_, count_, trueCount_, edge_, bestMove_, insurance_)
   }
 }
 
-window.updatePerfect = (edge, bestMove) => {
+window.updatePerfect = (edge, bestMove, insurance) => {
   perfectEdge = edge;
   perfectBestMove = bestMove;
+  perfectInsurance = insurance;
 }
 
 class Analysis extends React.Component {
@@ -123,6 +125,7 @@ function Perfect(props) {
     <div>Perfect System</div>
     {edgeText} <br />
     {bestMoveText}
+    <Insurance yes={perfectInsurance} />
   </div>;
 }
 

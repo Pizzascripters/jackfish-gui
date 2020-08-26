@@ -23,11 +23,11 @@
   margin-right: 0px;
 }
 
-#practiceAnalysis #count div#insurance {
+#practiceAnalysis div#insurance {
   font-size: 1.2vw;
 }
 
-#practiceAnalysis #count div#insurance div {
+#practiceAnalysis #count div#insurance div, #practiceAnalysis #perfect div#insurance div {
   margin-left: 10px;
   display: inline-block;
 }
