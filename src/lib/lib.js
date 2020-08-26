@@ -1,5 +1,20 @@
 import React from 'react';
 
+let actionNames = {
+  'H': <span className="red">Hit</span>,
+  'S': <span className="yellow">Stand</span>,
+  'DD': <span className="blue">Double</span>,
+  'P': <span className="green">Split</span>,
+  'R': <span className="white">Surrender</span>,
+};
+const ACTION_NAMES = Object.assign(actionNames, {
+  'D': <span>{actionNames['DD']}, otherwise {actionNames['H']}</span>,
+  'd': <span>{actionNames['DD']}, otherwise {actionNames['S']}</span>,
+  'RH': <span>{actionNames['R']}, otherwise {actionNames['H']}</span>,
+  'RS': <span>{actionNames['R']}, otherwise {actionNames['S']}</span>,
+  'RP': <span>{actionNames['R']}, otherwise {actionNames['P']}</span>,
+});
+
 function stateToName(state, long) {
   let v = String(state & 0x1f);
   let soft = state & 0x20;
@@ -51,5 +66,10 @@ function formatPercent(a, b) {
   }
 }
 
+function formatMove(move) {
+  return ACTION_NAMES[move];
+}
+
 export { stateToName };
 export { formatPercent };
+export { formatMove };

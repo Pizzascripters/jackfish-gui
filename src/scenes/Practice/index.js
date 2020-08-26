@@ -2,6 +2,7 @@ import React from 'react';
 import Jackfish from '../../lib/Jackfish';
 import Game from './components/Game';
 import GameSetup from './components/GameSetup';
+import Analysis from './components/Analysis';
 import Parameters from '../../components/Parameters';
 import Tabs from '../../components/Tabs';
 import './style.css';
@@ -57,7 +58,7 @@ class Practice extends React.Component {
               penetration={this.penetration}
             />;
           } else if(i === 1) {
-            return null;
+            return <Analysis />;
           }
           return null;
         }} />

@@ -1,21 +1,8 @@
 import React from 'react';
-import {stateToName, formatPercent} from '../../../../lib/lib.js';
+import {stateToName, formatPercent, formatMove} from '../../../../lib/lib.js';
+import Actions from '../../../../components/Actions';
+import Insurance from '../../../../components/Insurance';
 import './style.css';
-
-let actionNames = {
-  'H': <span className="red">Hit</span>,
-  'S': <span className="yellow">Stand</span>,
-  'DD': <span className="blue">Double</span>,
-  'P': <span className="green">Split</span>,
-  'R': <span className="white">Surrender</span>,
-}
-const ACTION_NAMES = Object.assign(actionNames, {
-  'D': <span>{actionNames['DD']}, otherwise {actionNames['H']}</span>,
-  'd': <span>{actionNames['DD']}, otherwise {actionNames['S']}</span>,
-  'RH': <span>{actionNames['R']}, otherwise {actionNames['H']}</span>,
-  'RS': <span>{actionNames['R']}, otherwise {actionNames['S']}</span>,
-  'RP': <span>{actionNames['R']}, otherwise {actionNames['P']}</span>,
-});
 
 class Analysis extends React.Component {
   constructor(props) {
@@ -42,7 +29,7 @@ class Analysis extends React.Component {
       } else {
         return <div id='analysis' className='section'>
           <MainHeader jackfish={props.jackfish} />
-          <Insurance jackfish={props.jackfish} />
+          <Insurance yes={props.jackfish.takeInsurance()} />
           <Edge jackfish={props.jackfish} />
         </div>;
       }
@@ -69,20 +56,6 @@ function MainHeader(props) {
   </div>;
 }
 
-function Insurance(props) {
-  let insurance;
-  if(props.jackfish.takeInsurance()) {
-    insurance = <div className='green'>Yes</div>
-  } else {
-    insurance = <div className='red'>No</div>
-  }
-
-  return <div id='insurance'>
-    Take Insurance?
-    {insurance}
-  </div>;
-}
-
 function Edge(props) {
   return <div id='edge'>
     Player Edge: <br />
@@ -102,7 +75,7 @@ function BestMove(props) {
   let dealer = props.selection[1];
   let move = jackfish.getTable(player, dealer);
   let action = (move.surrender ? 'R' : '') + move.action;
-  return <div className='bestmove'>{ACTION_NAMES[action]}</div>;
+  return <div className='bestmove'>{formatMove(action)}</div>;
 }
 
 function Dealer(props) {
@@ -128,51 +101,6 @@ function Dealer(props) {
       return <div key={i}>{label}: {formatPercent(odds[i])}</div>
     })}
   </div>
-}
-
-function Actions(props) {
-  if(props.selection) {
-    let jackfish = props.jackfish;
-    let peek = jackfish.getParams().peek;
-    let player = props.selection[0];
-    let dealer = props.selection[1];
-    let value = player & 0x3f
-    let pair = player & 0x40;
-    let ret;
-    if(pair) {
-      let pre = value === 43 ? 44 : 2*value; // Value before splitting
-      ret = [
-        jackfish.getHit(pre, dealer),
-        jackfish.getStand(pre, dealer),
-        jackfish.getDouble(pre, dealer),
-        jackfish.getSplit(value, dealer),
-      ];
-    } else {
-      ret = [
-        jackfish.getHit(value, dealer),
-        jackfish.getStand(value, dealer),
-        jackfish.getDouble(value, dealer)
-      ];
-    }
-    if(props.surrender === 'late' || (!peek && props.surrender === 'early')) {
-      ret[4] = -.5;
-    } else if(props.surrender === 'early') {
-      let b = jackfish.getBJOdds(dealer);
-      ret[4] = (b - .5) / (1 - b);
-    }
-    let labels = [actionNames['H'], actionNames['S'], actionNames['DD'], actionNames['P'], actionNames['R']];
-    return <div className='actionInfo'>
-      <div>Actions:</div>
-      {ret.map((p, i) => {
-        if(p && p > -Infinity) {
-          return <div key={i}>{labels[i]}: {formatPercent(p, true)}</div>
-        } else {
-          return null;
-        }
-      })}
-    </div>
-  }
-  return null;
 }
 
 export default Analysis;

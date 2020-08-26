@@ -7,11 +7,17 @@ class Game extends React.Component {
     this.state = {};
 
     window.grayAction = (action) => {
-      document.getElementById(`button${action}`).className = 'gray';
+      let elem = document.getElementById(`button${action}`);
+      if(elem) {
+        elem.className = 'gray';
+      }
     }
 
     window.activateAction = (action) => {
-      document.getElementById(`button${action}`).className = '';
+      let elem = document.getElementById(`button${action}`);
+      if(elem) {
+        elem.className = '';
+      }
     }
   }
 
