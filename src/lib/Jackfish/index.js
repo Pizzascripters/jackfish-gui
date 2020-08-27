@@ -308,8 +308,18 @@ function finishHand() {
     game.active = null;
     game.stage = STAGES.REVEALING;
   } else if(game.active === 5 && game.stage === STAGES.INSURANCE) {
-    game.active = 0;
-    game.stage = STAGES.PLAYING;
+    // Peek ace showing
+    if(params.peek && getValue(game.dealer) === Infinity) {
+      game.stage = STAGES.REVEALING;
+      game.active = null;
+    } else {
+      game.active = 0;
+      game.stage = STAGES.PLAYING;
+      // Clear insurance
+      game.insurance.forEach((bet, i) => {
+        game.insurance[i] = false;
+      })
+    }
   }
 }
 
@@ -959,7 +969,7 @@ function frame(time) {
           game.generalCooldown = DEAL_COOLDOWN;
         }
       } else if(params.peek && getValue(game.dealer) === Infinity) {
-        // Peek cards
+        // Peek 10 showing blackjack
         game.stage = STAGES.REVEALING;
         game.active = null;
       } else {
@@ -1011,7 +1021,8 @@ function frame(time) {
         game.bets[i] += change;
 
         if(game.insurance[i] && getValue(game.dealer) === Infinity) {
-          game.bets[i] += 2 * game.insurance[i];
+          game.bets[i] += 3 * game.insurance[i];
+          game.insurance[i] = 0;
         }
       });
       game.finished.forEach((player, i) => {
@@ -1148,12 +1159,10 @@ window.addBet = (bet) => {
       game.cash += game.bets[game.active];
       game.bets[game.active] = 0;
       game.originalBets[game.active] = 0;
-    } else {
-      if(game.cash >= bet) {
-        game.cash -= bet;
-        game.bets[game.active] += bet;
-        game.originalBets[game.active] += bet;
-      }
+    } else if(game.active !== null && game.cash >= bet) {
+      game.cash -= bet;
+      game.bets[game.active] += bet;
+      game.originalBets[game.active] += bet;
     }
   }
 }
@@ -1213,7 +1222,7 @@ window.doAction = (action, ai) => {
       if(game.canInsurance) {
         didAction = true;
         game.insurance[game.active] = game.bets[game.active] / 2;
-        if(game.boxes[game.active].ai) {
+        if(!game.boxes[game.active].ai) {
           game.cash -= game.bets[game.active] / 2;
         }
         finishHand();
