@@ -1087,25 +1087,17 @@ function Shoe(jackfish) {
   let count = 0;
   let hilo = 0;
   let omega2 = 0;
+  let cards = [];
 
   let comp = fillArray(4 * game.count.decks, 10);
   comp[CARD_STATES.indexOf(10)] *= 4;
-
-  let orderedCards = [];
-  for(let i = 0; i < game.count.decks; i++) {
-    IMAGE_KEYS.forEach(card => {
-      orderedCards.push(card);
-    });
-  }
-
-  let cards = [];
-  while(orderedCards.length > 0) {
-    let i = Math.floor(Math.random() * orderedCards.length);
-    cards.push(orderedCards[i]);
-    orderedCards.splice(i, 1);
-  }
+  shuffle();
 
   this.draw = () => {
+    if(cards.length === 0) {
+      shuffle();
+    }
+
     let card = cards.pop();
     comp[getCardIndex(card)]--; // Update comp
     if(game.count.system !== 'none') {
@@ -1150,6 +1142,24 @@ function Shoe(jackfish) {
     params.count.decks = cards.length / 52;
   }
   updateCount();
+
+  function shuffle() {
+    // Create array of all cards in order
+    let orderedCards = [];
+    for(let i = 0; i < game.count.decks; i++) {
+      IMAGE_KEYS.forEach(card => {
+        orderedCards.push(card);
+      });
+    }
+
+    // Randomly pick cards from ordered cards
+    cards = [];
+    while(orderedCards.length > 0) {
+      let i = Math.floor(Math.random() * orderedCards.length);
+      cards.push(orderedCards[i]);
+      orderedCards.splice(i, 1);
+    }
+  }
 }
 
 /*-- Global functions --*/
