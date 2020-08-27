@@ -112,13 +112,13 @@ function Count(props) {
 }
 
 function Perfect(props) {
-  let edgeText = <span className='edge'>Edge: Calculating...</span>
-  if(edge) {
+  let edgeText = <span className='edge'>Edge: Calculating...</span>;
+  if(perfectEdge) {
     edgeText = <span className='edge'>Edge: {formatPercent(perfectEdge, true)}</span>;
   }
 
   let bestMoveText = <span className='bestMove'>Best Move: N/A</span>;
-  if(bestMove) {
+  if(perfectBestMove) {
     bestMoveText = <span className='bestMove'>Best Move: {formatMove(perfectBestMove)}</span>;
   }
   return <div id='perfect'>

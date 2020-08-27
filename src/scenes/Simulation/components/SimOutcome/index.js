@@ -59,7 +59,7 @@ class SimOutcome extends React.Component {
     if(uncutData.length > 0) {
       let max = uncutData.reduce((acc, x) => acc > x[1] ? acc : x[1]);
       uncutData.forEach((frequency, i) => {
-        if(frequency[1] / max >= 0) {
+        if(frequency[1] / max >= 1e-3) {
           graphData.push(frequency);
         }
       });

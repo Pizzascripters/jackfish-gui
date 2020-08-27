@@ -717,7 +717,7 @@ function frame(time) {
   ctx.fillText(`${game.shoe.getSize()} cards left in shoe`, 20, 84);
 
   // Generate count and perfect tables
-  if(countEdge === null) {
+  if(countEdge === null && game.count.system !== 'none') {
     if(!countTableRequested) {
       if(!makingAITables) {
         params.count.system = game.count.system;
@@ -763,7 +763,7 @@ function frame(time) {
   // Determine best moves
   let countBestMove = null;
   let perfectBestMove = null;
-  if(game.active !== null) {
+  if(game.players[game.active] !== undefined) {
     let hand = getHand(game.players[game.active]);
     let tableIndex = TABLE_HANDS.indexOf(hand);
     let dealerIndex = DEALER_STATES.indexOf(getDealer(game.dealer));
@@ -1026,27 +1026,34 @@ function frame(time) {
     game.reset();
   }
 
+  text = null;
   if(game.stage === STAGES.BETTING) {
-    ctx.fillStyle = '#fff';
-    ctx.font = '96px Noto Sans';
-    let text = 'Click to deal';
+    text = 'Click to deal';
     if(makingAITables) {
       text = 'Making AI tables...';
     }
-
+  } else if(game.stage === STAGES.INSURANCE) {
+    text = 'Insurance?';
+  }
+  if(text) {
+    ctx.fillStyle = '#fff';
+    ctx.font = '96px Noto Sans';
     let width = ctx.measureText(text).width;
     let height = 96;
     let x = cvs.width / 2 - width / 2;
     let y = cvs.height * .2;
     ctx.fillText(text, x, y + height);
 
-    let hover = mouse.x > x && mouse.x < x + width && mouse.y > y && mouse.y < y + height;
-    if(mouse.down && hover && !makingAITables) {
-      pointer = true;
-      game.stage = STAGES.DEALING;
-      game.active = null;
-    } else if(hover && !makingAITables) {
-      pointer = true;
+    // Click to deal events
+    if(game.stage === STAGES.BETTING) {
+      let hover = mouse.x > x && mouse.x < x + width && mouse.y > y && mouse.y < y + height;
+      if(mouse.down && hover && !makingAITables) {
+        pointer = true;
+        game.stage = STAGES.DEALING;
+        game.active = null;
+      } else if(hover && !makingAITables) {
+        pointer = true;
+      }
     }
   }
 
@@ -1089,14 +1096,18 @@ function Shoe(jackfish) {
 
   this.draw = () => {
     let card = cards.pop();
+    comp[getCardIndex(card)]--; // Update comp
     if(game.count.system !== 'none') {
       const INDICES = SYSTEM_NAMES[game.count.system];
       count += INDICES[getCardIndex(card)];
       hilo += HILO[getCardIndex(card)];
       omega2 += OMEGA2[getCardIndex(card)];
-      comp[getCardIndex(card)]--; // Update comp
+      countEdge = null;
+      countTable = null;
       updateCount();
     }
+    perfectEdge = null;
+    perfectTable = null;
     return card;
   }
 
@@ -1126,10 +1137,6 @@ function Shoe(jackfish) {
     params.count.count = count;
     params.count.tc = 52 * count / cards.length;
     params.count.decks = cards.length / 52;
-    countEdge = null;
-    perfectEdge = null;
-    countTable = null;
-    perfectTable = null;
   }
   updateCount();
 }
