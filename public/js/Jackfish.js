@@ -129,6 +129,7 @@ function Jackfish(cb, params) {
     function subCb(key, value) {
       all[key] = value;
       if(--valuesLeft <= 0) {
+        all.bjOdds = DEALER_STATES.map(getBJOdds.bind(this, comp));
         all.matrices.tM = tM;
         all.matrices.rM = rM;
         all.matrices.rdM = rdM;
@@ -281,8 +282,14 @@ function Jackfish(cb, params) {
       });
       cb(edge);
     } else {
+      let shiftedComp = pullCard(comp, j, 52 * params.count.decks);
       let dealer = DEALER_STATES[j];
-      let state = mpower(hitMatrix(comp), 2)[HAND_STATES.indexOf(0)];
+      let state = squishMatrix(
+        progressMState(
+          initStateMatrix(0, shiftedComp),
+          52 * params.count.decks, [], 2
+        )
+      );
       // Add blackjack to state
       state[HAND_STATES.indexOf(BLACKJACK)] = state[HAND_STATES.indexOf(21)]; // 21 after 2 cards is blackjack
       state[HAND_STATES.indexOf(21)] = 0;
@@ -291,17 +298,17 @@ function Jackfish(cb, params) {
       CARD_STATES.forEach((card, i) => {
         let hand = pairState(card);
         let k = HAND_STATES.indexOf(hand);
-        let pairOdds = comp[i] * comp[i];
+        let pairOdds = shiftedComp[i] * shiftedComp[i];
         state[k] -= pairOdds;
         rPair.push(pairOdds * table[TABLE_HANDS.indexOf(card+0x40)][j].retNS);
       });
       let r = dot(state, transpose(rsM)[j]) + vtotal(rPair);
       let insurance = 0;
       if(dealer === DEALER_ACE && this.takeInsurance()) {
-        insurance = 1.5*comp[CARD_STATES.indexOf(10)] - .5;
+        insurance = 1.5*shiftedComp[CARD_STATES.indexOf(10)] - .5;
       }
       if(params.peek) {
-        let bjOdds = getBJOdds(comp, CARD_STATES[j]);
+        let bjOdds = getBJOdds(shiftedComp, CARD_STATES[j]);
         return r * (1 - bjOdds) - bjOdds + insurance;
       } else {
         return r + insurance;
@@ -817,31 +824,21 @@ function Jackfish(cb, params) {
       endHands.push(17+0x20);
     }
 
-    // 12 is the maximum size for a blackjack hand
     DEALER_STATES.forEach((dealer, c) => {
-      // Initialize the state matrix
-      states[c] = zeroes([HAND_STATES.length, CARD_STATES.length]);
-      states[c][HAND_STATES.indexOf(dealer)] = copy(comp);
-
-      loop(0, 12, t => {
-        states[c] = progressMState(states[c], cards, endHands);
-      });
-    });
-
-    states.forEach((state, c) => {
-      states[c] = squishMatrix(state);
+      let shiftedComp = pullCard(comp, c, cards--);
+      states[c] = initStateMatrix(dealer, shiftedComp);
+      states[c] = squishMatrix(progressMState(states[c], cards, endHands, 12));
     });
 
     // If peek, weight end states such that blackjack is impossible
     if(params.peek) {
+      let bji = HAND_STATES.indexOf(BLACKJACK); // Blackjack index
       states.forEach((state, c) => {
-        let bji = HAND_STATES.indexOf(BLACKJACK); // Blackjack index
         let bjOdds = state[bji];
         state[bji] = 0; // Blackjack is impossible
         if(bjOdds > 0) {
-          state.forEach((endHand, i) => {
-            state[i] /= 1 - bjOdds; // Weight every other outcome
-          });
+           // Weight every other outcome
+           states[c] = state.map(endHand => endHand / (1 - bjOdds));
         }
       });
     }
@@ -1108,7 +1105,11 @@ function Jackfish(cb, params) {
       } else {
         newState[j] = (cards * state[j]) / (cards - 1);
       }
+      if(newState[j] < 0) {
+        newState[j] = 0;
+      }
     });
+    newState = vnormalize(newState);
     return vscale(newState, total);
   }
 
@@ -1163,9 +1164,16 @@ function Jackfish(cb, params) {
   // mState[i][j]: the chance of player having hand i and getting card j on next hit
   // cards: number of cards
   // endHands[i]: don't hit on hand i
-  function progressMState(mState, cards, endHands) {
+  function progressMState(mState, cards, endHands, reps) {
     let P = progressionMatrix();
     let newState = zeroes([HAND_STATES.length, CARD_STATES.length]);
+
+    if(reps) {
+      for(let i = 0; i < reps; i++) {
+        mState = progressMState(mState, cards, endHands);
+      }
+      return mState;
+    }
 
     HAND_STATES.forEach((postHit, I) => {
       HAND_STATES.forEach((preHit, i) => {
@@ -1422,6 +1430,12 @@ function Jackfish(cb, params) {
       });
     });
     return v;
+  }
+
+  function initStateMatrix(hand, comp) {
+    let stateMatrix = zeroes([HAND_STATES.length, CARD_STATES.length]);
+    stateMatrix[HAND_STATES.indexOf(hand)] = copy(comp);
+    return stateMatrix;
   }
 
   cb(); // Callback

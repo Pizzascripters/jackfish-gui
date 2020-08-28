@@ -85,6 +85,7 @@ const SYSTEM_NAMES = {
 let params;
 let practiceParams = {};
 let comp;
+let bjOdds;
 let endM, standM, doubleM;
 let table;
 let edge, insurance;
@@ -179,6 +180,11 @@ function Jackfish(params_) {
       }
     }
   }
+  this.getBJOdds = (dealer) => {
+    if(dealer === ACE || dealer === 11) dealer = DEALER_ACE;
+    if(dealer === 10) dealer = DEALER_TEN;
+    return bjOdds[DEALER_STATES.indexOf(dealer)];
+  }
   defineConstants.bind(this)([
     ['BLACKJACK', BLACKJACK],
     ['BUST', BUST],
@@ -225,6 +231,7 @@ worker.addEventListener('message', e => {
   } else if(e.data[0] === 'doAll') {
     // Unpack data
     let all = e.data[1];
+    bjOdds = all.bjOdds;
     standM = all.matrices.standM;
     doubleM = all.matrices.doubleM;
     endM = all.matrices.endM;
