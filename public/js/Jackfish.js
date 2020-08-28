@@ -809,75 +809,44 @@ function Jackfish(cb, params) {
   }
 
   function endMatrix(comp, soft17, cards) {
-    let P = progressionMatrix();
     let states = [];
-    let a = [];
 
+    // Determine end hands
+    let endHands = [17, 18, 19, 20, 21, 18+0x20, 19+0x20, 20+0x20, BLACKJACK, BUST];
+    if(!soft17) {
+      endHands.push(17+0x20);
+    }
+
+    // 12 is the maximum size for a blackjack hand
     DEALER_STATES.forEach((dealer, c) => {
       // Initialize the state matrix
       states[c] = zeroes([HAND_STATES.length, CARD_STATES.length]);
-      states[c][HAND_STATES.indexOf(dealer)] = comp;
+      states[c][HAND_STATES.indexOf(dealer)] = copy(comp);
 
-      // Peeked cards have weighted chances
-      let weight = 1;
-      if(params.peek && dealer === DEALER_TEN) {
-        weight = 1 / (1 - comp[DEALER_STATES.indexOf(DEALER_ACE)]); // One ten. Dealer can't have an ace.
-      } else if(params.peek && dealer === DEALER_ACE) {
-        weight = 1 / (1 - comp[DEALER_STATES.indexOf(DEALER_TEN)]); // One ace. Dealer can't have a 10.
-      }
-
-      // 12 is the maximum size for a blackjack hand
       loop(0, 12, t => {
-        let newState = zeroes([HAND_STATES.length, CARD_STATES.length]);
-        HAND_STATES.forEach((hand, I) => {
-          HAND_STATES.forEach((hand_, i) => {
-            let [value, soft] = getHandDetails(hand_);
-            let endState = ((value >= 17 && !(value === 17 && soft && soft17)) || hand_ === BUST);
-            CARD_STATES.forEach((card, j) => {
-              // Skip Blackjack
-              if(params.peek && ((hand_ === DEALER_TEN && card === ACE) || (hand_ === DEALER_ACE && card === 10))) {
-                return;
-              }
+        states[c] = progressMState(states[c], cards, endHands);
+      });
+    });
 
-              // If (card j) causes (state i) to transition to (state I)
-              if((endState && i === I) || (!endState && P[i][j] === HAND_STATES[I])) {
-                // Make sure (state i) is reachable from (dealer card c)
-                let total = vtotal(states[c][i]);
-                if(total > 0) {
-                  // Shift the composition as if we pulled (card j)
-                  let newComp = pullCard(states[c][i], j, cards - t);
-                  // Weight the new odds if necessary
-                  if(weight !== 1 && (hand_ === DEALER_TEN || hand_ === DEALER_ACE)) {
-                    newComp = vscale(newComp, weight);
-                  }
-                  // Add that deck distribution to (state I)
-                  newState[I] = vsum(newState[I], vscale(newComp, states[c][i][j] / total));
-                }
-              }
-            });
+    states.forEach((state, c) => {
+      states[c] = squishMatrix(state);
+    });
+
+    // If peek, weight end states such that blackjack is impossible
+    if(params.peek) {
+      states.forEach((state, c) => {
+        let bji = HAND_STATES.indexOf(BLACKJACK); // Blackjack index
+        let bjOdds = state[bji];
+        state[bji] = 0; // Blackjack is impossible
+        if(bjOdds > 0) {
+          state.forEach((endHand, i) => {
+            state[i] /= 1 - bjOdds; // Weight every other outcome
           });
-        });
-        states[c] = newState;
+        }
       });
-    });
-
-    DEALER_STATES.forEach((dealer, c) => {
-      a[c] = squishState(states[c]);
-    });
-
-    // 2d matrtix -> 1d vector
-    function squishState(state) {
-      let v = [];
-      HAND_STATES.forEach((hand, i) => {
-        v[i] = 0;
-        CARD_STATES.forEach((card, j) => {
-          v[i] += state[i][j];
-        });
-      });
-      return v;
     }
 
-    return a;
+    return states;
   }
 
   // Create transition matrix for the player on hit
@@ -1191,6 +1160,44 @@ function Jackfish(cb, params) {
 
   /*-- General Utility Functions --*/
 
+  // mState[i][j]: the chance of player having hand i and getting card j on next hit
+  // cards: number of cards
+  // endHands[i]: don't hit on hand i
+  function progressMState(mState, cards, endHands) {
+    let P = progressionMatrix();
+    let newState = zeroes([HAND_STATES.length, CARD_STATES.length]);
+
+    HAND_STATES.forEach((postHit, I) => {
+      HAND_STATES.forEach((preHit, i) => {
+        // preHit: hand before hitting
+        // postHit: hand after hitting
+
+        if(endHands.includes(postHit) && i === I) {
+          // If postHit is an end hand, we don't draw any cards
+          return newState[I] = vsum(newState[I], mState[I]);
+        }
+
+        let [value, soft] = getHandDetails(preHit);
+        CARD_STATES.forEach((card, j) => {
+          let preHitChance = vtotal(mState[i]); // Chance that player has hand preHit
+          // If card causes preHit to transition to postHit (eg. card=2, preHit=8, postHit=10)
+          if(
+            preHitChance > 0 &&
+            !endHands.includes(preHit) &&
+            P[i][j] === postHit
+          ) {
+            // Shift the composition as if we pulled card j
+            let newComp = pullCard(mState[i], j, cards);
+            // Add that deck distribution to (state I)
+            newState[I] = vsum(newState[I], vscale(newComp, mState[i][j] / preHitChance));
+          }
+        });
+      });
+    });
+
+    return newState;
+  }
+
   function deepCompare(obj1, obj2) {
     if(
       obj1 !== undefined && obj2 === undefined ||
@@ -1403,6 +1410,18 @@ function Jackfish(cb, params) {
       x -= a[++i];
     }
     return i;
+  }
+
+  // 2d matrtix -> 1d vector
+  function squishMatrix(m) {
+    let v = [];
+    HAND_STATES.forEach((hand, i) => {
+      v[i] = 0;
+      CARD_STATES.forEach((card, j) => {
+        v[i] += m[i][j];
+      });
+    });
+    return v;
   }
 
   cb(); // Callback
