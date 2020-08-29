@@ -1257,14 +1257,6 @@ function fillArray(value, len) {
   return a;
 }
 
-function zeroes(dims) {
-  if(dims.length === 1) {
-    return fillArray(0, dims[0]);
-  } else {
-    return fillArray(zeroes.bind(null, dims.slice(1)), dims[0]);
-  }
-}
-
 /*-- Mathy Utility Functions --*/
 
 function vnormalize(u) {
