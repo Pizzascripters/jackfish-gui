@@ -1,5 +1,5 @@
 import React from 'react';
-import Jackfish from '../../lib/Jackfish';
+import Jackfish from '../../lib/main.js';
 import Parameters from '../../components/Parameters';
 import SimOutcome from './components/SimOutcome';
 import SimRules from './components/SimRules';

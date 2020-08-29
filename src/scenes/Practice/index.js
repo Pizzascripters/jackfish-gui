@@ -1,5 +1,5 @@
 import React from 'react';
-import Jackfish from '../../lib/Jackfish';
+import Main from '../../lib/main.js';
 import Game from './components/Game';
 import GameSetup from './components/GameSetup';
 import Analysis from './components/Analysis';
@@ -11,20 +11,22 @@ class Practice extends React.Component {
   constructor(props) {
     super(props);
     this.state = { selection: null };
-    this.jackfish = null;
+    this.main = null;
     this.boxes = [];
-    for(let i = 0; i < 5; i++) this.boxes.push({ai: false, difficulty: 'Basic Strategy'});
+    for(let i = 0; i < 5; i++) {
+      this.boxes.push({ai: false, difficulty: 'Basic Strategy'});
+    }
     this.cash = 1000;
     this.minimum = 10;
     this.penetration = 1;
   }
 
   updateEngine(params) {
-    let jackfish = this.jackfish;
-    if(!jackfish) {
-      this.jackfish = new Jackfish(params);
+    let main = this.main;
+    if(!main) {
+      this.main = new Main(params);
     } else {
-      jackfish.setParams(params);
+      main.jackfish.setParams(params);
     }
   }
 
@@ -33,16 +35,16 @@ class Practice extends React.Component {
     this.cash = setup.cash;
     this.minimum = setup.minimum;
     this.penetration = setup.penetration;
-    this.jackfish.setPracticeParams({
+    this.main.setPracticeParams({
       boxes: this.boxes,
       cash: this.cash,
       minimum: this.minimum,
       penetration: this.penetration
-    })
+    });
   }
 
   componentDidMount() {
-    window.startPractice(this.jackfish);
+    window.startPractice(this.main);
   }
 
   render() {

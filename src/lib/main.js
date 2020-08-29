@@ -1,4 +1,4 @@
-/*-- Hand and card constants --*/
+/*-- Constants --*/
 
 // Like an enum, but we can't, because it's JavaScript
 const BLACKJACK = -1;
@@ -67,7 +67,6 @@ const IMAGE_HREFS = (() => {
 
 const DEAL_COOLDOWN = 300; // ms
 
-/*-- Counting Constants --*/
 const HILO = [1, 1, 1, 1, 1, 0, 0, 0, -1, -1];
 const KO = [1, 1, 1, 1, 1, 1, 1, 0, 0, -1, -1];
 const OMEGA2 = [1, 1, 2, 2, 2, 1, 0, -1, -2, 0];
@@ -87,8 +86,6 @@ let practiceParams = {};
 let comp;
 let bjOdds;
 let endM, standM, doubleM;
-let table;
-let edge, insurance;
 let simCallback;
 let loaded = false;
 let listeners = [];
@@ -113,7 +110,7 @@ let rsM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with sur
 let hitM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
 let splitM = zeroes([DEALER_STATES.length, DEALER_STATES.length]);
 
-function Jackfish(params_) {
+function Main(params_) {
   params = params_;
 
   /*-- Public Functions --*/
@@ -125,7 +122,6 @@ function Jackfish(params_) {
   this.getParams = () => params;
   this.getReturn = () => rsM;
   this.getReturnNoDouble = () => rM;
-  this.getTable = getTable;
   this.getEnd = (dealer, end) => {
     return iDSMatrix(endM, dealer, end);
   }
@@ -141,16 +137,9 @@ function Jackfish(params_) {
   this.getSplit = (player, dealer) => {
     return iDDMatrix(splitM, player, dealer);
   }
-  this.getEdge = () => edge;
-  this.setParams = (params_, cb) => {
-    loaded = false;
-    worker.postMessage(['setParams', [params_]]);
-    params = params_;
-  }
   this.setPracticeParams = (practiceParams_) => {
     practiceParams = practiceParams_;
   }
-  this.takeInsurance = () => insurance;
   this.createSimulation = (options) => {
     worker.postMessage(['createSimulation', [options]]);
   }
@@ -194,16 +183,6 @@ function Jackfish(params_) {
   ], true);
 
   /*-- Private Functions --*/
-  function getTable(player, dealer) {
-    if(player && dealer) {
-      if(dealer === 'A' || dealer === ACE) dealer = DEALER_ACE;
-      if(dealer === 10) dealer = DEALER_TEN;
-      return table[TABLE_HANDS.indexOf(player)][DEALER_STATES.indexOf(dealer)];
-    } else {
-      return table;
-    }
-  }
-
   function defineConstants(constants, list) {
     if(list) {
       for(let constant of constants) {
@@ -219,11 +198,13 @@ function Jackfish(params_) {
       })
     }
   }
+
+  window.jackfish = this.jackfish = new window.Jackfish(params);
 }
 
 /*-- Worker --*/
 // for computationally heavy tasks
-let worker = new Worker('js/Jackfish.js');
+let worker = new Worker('js/JackfishWorker.js');
 worker.postMessage(['Constructor', [params]]);
 worker.addEventListener('message', e => {
   if(e.data[0] === 'setParams') {
@@ -240,9 +221,6 @@ worker.addEventListener('message', e => {
     rsM = all.matrices.rsM;
     hitM = all.matrices.hitM;
     splitM = all.matrices.splitM;
-    table = all.table;
-    insurance = all.insurance;
-    edge = all.edge;
     loaded = true;
     for(let listener of listeners) {
       listener();
@@ -339,8 +317,7 @@ function generateAITables(hilo, omega, cb) {
   let tc = -7;
   let system = 'hilo';
 
-  let f = makeTable.bind(this);
-  this.addListener(f);
+  let listener = this.jackfish.addListener('doAll', makeTable.bind(this));
 
   function makeTable() {
     // Don't generate tables that aren't necessary
@@ -352,7 +329,7 @@ function generateAITables(hilo, omega, cb) {
     }
     if(system === 'omega2' && !omega) {
       makingAITables = false;
-      this.removeListener(f);
+      this.removeListener(listener);
       if(cb) {
         cb();
       }
@@ -363,7 +340,7 @@ function generateAITables(hilo, omega, cb) {
     if(!aiTables[system]) {
       aiTables[system] = {};
     }
-    aiTables[system][tc] = deepCopy(table);
+    aiTables[system][tc] = deepCopy(this.jackfish.getTable());
 
     tc++;
     if(system === 'hilo' && tc > 6) {
@@ -372,7 +349,7 @@ function generateAITables(hilo, omega, cb) {
       makeTable.bind(this)();
     } else if(system === 'omega2' && tc > 12) {
       makingAITables = false;
-      this.removeListener(f);
+      this.removeListener(listener);
       if(cb) {
         cb();
       }
@@ -383,7 +360,7 @@ function generateAITables(hilo, omega, cb) {
         count: tc * game.count.decks / 2,
         decks: game.count.decks / 2
       };
-      this.setParams(params);
+      this.jackfish.setParams(params, true);
     }
   }
   makeTable.bind(this)();
@@ -569,7 +546,6 @@ function frame(time) {
   }
 
   function aiCasual(getBet, getInsurance) {
-    if(getInsurance) console.log(game.active)
     if(getBet) {
       if(game.shoe.getHiLo() > 6) {
         return 120;
@@ -738,18 +714,15 @@ function frame(time) {
     if(!countTableRequested) {
       if(!makingAITables) {
         params.count.system = game.count.system;
-
-        let listener = onTableCreate.bind(this);
-        function onTableCreate() {
-          countEdge = edge;
-          countInsurance = insurance;
-          countTable = deepCopy(table);
+        countTableRequested = true;
+        this.jackfish.setParams(params, true);
+        let listener = this.jackfish.addListener('doAll', () => {
+          countEdge = this.jackfish.getEdge();
+          countInsurance = this.jackfish.getEdge();
+          countTable = deepCopy(this.jackfish.getTable());
           countTableRequested = false;
           this.removeListener(listener);
-        }
-        countTableRequested = true;
-        this.setParams(params);
-        this.addListener(listener);
+        });
       }
     }
   } else if(perfectEdge === null) {
@@ -762,18 +735,16 @@ function frame(time) {
         decks: params.count.decks
       }
 
-      let listener = onTableCreate.bind(this);
-      function onTableCreate() {
-        perfectEdge = edge;
-        perfectInsurance = insurance;
-        perfectTable = deepCopy(table);
+      perfectTableRequested = true;
+      this.jackfish.setParams(params, true);
+      let listener = this.jackfish.addListener('doAll', () => {
+        perfectEdge = this.jackfish.getEdge();
+        perfectInsurance = this.jackfish.takeInsurance();
+        perfectTable = deepCopy(this.jackfish.getTable());
         perfectTableRequested = false;
         this.removeListener(listener);
         params.count = deepCopy(game.count);
-      }
-      perfectTableRequested = true;
-      this.setParams(params);
-      this.addListener(listener);
+      });
     }
   }
 
@@ -1451,4 +1422,4 @@ function vscale(u, c) {
   return u.map((x, i) => x * c);
 }
 
-export default Jackfish;
+export default Main;

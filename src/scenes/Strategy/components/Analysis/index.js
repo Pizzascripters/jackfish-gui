@@ -10,11 +10,11 @@ class Analysis extends React.Component {
     this.jackfishListener = () => {
       if(this.mounted) this.forceUpdate();
     }
-    props.jackfish.addListener(this.jackfishListener);
+    this.listener = window.jackfish.addListener('doAll', this.jackfishListener);
   }
 
   componentWillUnmount() {
-    this.props.jackfish.removeListener(this.jackfishListener);
+    window.jackfish.removeListener(this.listener);
   }
 
   componentDidMount() {
@@ -22,20 +22,20 @@ class Analysis extends React.Component {
   }
 
   render() {
-    if(this.props.jackfish.isLoaded()) {
+    if(window.jackfish.isLoaded()) {
       let props = this.props;
       if(props.selection) {
         return <div id='analysis' className='section'>
           <BoxHeader selection={props.selection}/>
-          <BestMove jackfish={props.jackfish} selection={props.selection} />
-          <Dealer jackfish={props.jackfish} selection={props.selection} />
-          <Actions jackfish={props.jackfish} selection={props.selection} surrender={props.jackfish.getParams().surrender} />
+          <BestMove selection={props.selection} />
+          <Dealer selection={props.selection} />
+          <Actions selection={props.selection} surrender={window.jackfish.getParams().surrender} />
         </div>;
       } else {
         return <div id='analysis' className='section'>
-          <MainHeader jackfish={props.jackfish} />
-          <Insurance yes={props.jackfish.takeInsurance()} />
-          <Edge jackfish={props.jackfish} />
+          <MainHeader />
+          <Insurance yes={window.jackfish.takeInsurance()} />
+          <Edge />
         </div>;
       }
     } else {
@@ -46,7 +46,7 @@ class Analysis extends React.Component {
 }
 
 function MainHeader(props) {
-  let params = props.jackfish.getParams();
+  let params = window.jackfish.getParams();
   let surrender = null;
   if(params.surrender === 'early') {
     surrender = <div className='small'>Early Surrender Allowed</div>
@@ -64,7 +64,7 @@ function MainHeader(props) {
 function Edge(props) {
   return <div id='edge'>
     Player Edge: <br />
-    {formatPercent(props.jackfish.getEdge(), true)}
+    {formatPercent(window.jackfish.getEdge(), true)}
   </div>;
 }
 
@@ -75,7 +75,7 @@ function BoxHeader(props) {
 }
 
 function BestMove(props) {
-  let jackfish = props.jackfish;
+  let jackfish = window.jackfish;
   let player = props.selection[0];
   let dealer = props.selection[1];
   let move = jackfish.getTable(player, dealer);
@@ -84,14 +84,14 @@ function BestMove(props) {
 }
 
 function Dealer(props) {
-  let jackfish = props.jackfish;
-  let peek = props.jackfish.getParams().peek;
+  let jackfish = window.jackfish;
+  let peek = window.jackfish.getParams().peek;
   let card = props.selection[1];
   let odds = [
-    jackfish.getEnd(card, 17) + jackfish.getEnd(card, 32+17),
-    jackfish.getEnd(card, 18) + jackfish.getEnd(card, 32+18),
-    jackfish.getEnd(card, 19) + jackfish.getEnd(card, 32+19),
-    jackfish.getEnd(card, 20) + jackfish.getEnd(card, 32+20),
+    jackfish.getEnd(card, 17) + jackfish.getEnd(card, 0x20+17),
+    jackfish.getEnd(card, 18) + jackfish.getEnd(card, 0x20+18),
+    jackfish.getEnd(card, 19) + jackfish.getEnd(card, 0x20+19),
+    jackfish.getEnd(card, 20) + jackfish.getEnd(card, 0x20+20),
     jackfish.getEnd(card, 21),
     jackfish.getEnd(card, -2),
   ];

@@ -1,19 +1,24 @@
 import React from 'react';
-import Jackfish from '../../lib/Jackfish';
 import Parameters from '../../components/Parameters';
 import Table from './components/Table';
 import Analysis from './components/Analysis';
+import Main from '../../lib/main.js';
 import './style.css';
 
 class Strategy extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { selection: null, jackfish: new Jackfish() };
+    this.state = { selection: null };
+    this.main = null;
   }
 
   updateEngine(params) {
-    let jackfish = this.state.jackfish;
-    jackfish.setParams(params);
+    let main = this.main;
+    if(!main) {
+      this.main = new Main(params);
+    } else {
+      this.main.jackfish.setParams(params, true);
+    }
   }
 
   onSelect(player, dealer) {
@@ -30,7 +35,7 @@ class Strategy extends React.Component {
 
   doTable() {
     this.setState({
-      table: this.state.jackfish.getTable()
+      table: window.jackfish.getTable()
     });
   }
 
@@ -40,12 +45,10 @@ class Strategy extends React.Component {
         updateEngine={this.updateEngine.bind(this)}
       />
       <Table
-        jackfish={this.state.jackfish}
         onSelect={this.onSelect.bind(this)}
         onClear={this.onClear.bind(this)}
       />
       <Analysis
-        jackfish={this.state.jackfish}
         selection={this.state.selection}
       />
     </div>

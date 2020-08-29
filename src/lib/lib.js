@@ -16,6 +16,9 @@ const ACTION_NAMES = Object.assign(actionNames, {
 });
 
 function stateToName(state, long) {
+  if(state === -3) state = 10;
+  if(state === -4) state = 43;
+  
   let v = String(state & 0x1f);
   let soft = state & 0x20;
   let pair = state & 0x40;

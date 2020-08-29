@@ -8,7 +8,7 @@ import Practice from './scenes/Practice';
 class App extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { page: 'practice' };
+    this.state = { page: 'strategy' };
   }
 
   onClick(page) {

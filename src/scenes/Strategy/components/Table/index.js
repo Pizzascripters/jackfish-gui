@@ -5,6 +5,7 @@ import './style.css';
 /* Card Constants */
 const CARD_NAMES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
 const CARD_STATES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 43];
+const DEALER_STATES = [2, 3, 4, 5, 6, 7, 8, 9, -3, -4];
 const PLAYER_HANDS = (() => {
   let hard = [],
       soft = [],
@@ -13,10 +14,10 @@ const PLAYER_HANDS = (() => {
     hard.push(v);
   }
   for(let v = 12; v <= 20; v++) {
-    soft.push(v + 32);
+    soft.push(v + 0x20);
   }
   for(let card of CARD_STATES) {
-    splits.push(card + 64);
+    splits.push(card + 0x40);
   }
   return [hard, soft, splits];
 })();
@@ -70,14 +71,14 @@ function TableHead() {
 function Row(props) {
   return <div className='row'>
     <div className='label'>{stateToName(props.player)}</div>
-    {CARD_STATES.map((card, i) => {
+    {DEALER_STATES.map((card, i) => {
       return <Box
         key={i}
         onSelect={props.onSelect.bind(null, props.player, card)}
         selection={props.selection}
         player={props.player}
         dealer={card}
-        cell={props.jackfish.getTable(props.player, card)}
+        cell={window.jackfish.getTable(props.player, card)}
       />
     })}
   </div>;
@@ -93,12 +94,12 @@ class Table extends React.Component  {
     this.jackfishListener = () => {
       if(this.mounted) this.forceUpdate();
     }
-    props.jackfish.addListener(this.jackfishListener);
+    this.listener = window.jackfish.addListener('doAll', this.jackfishListener);
     this.state = {selection: null};
   }
 
   componentWillUnmount() {
-    this.props.jackfish.removeListener(this.jackfishListener);
+    window.jackfish.removeListener(this.listener);
   }
 
   componentDidMount() {
@@ -123,7 +124,7 @@ class Table extends React.Component  {
   }
 
   render() {
-    if(this.props.jackfish.isLoaded()) {
+    if(window.jackfish.isLoaded()) {
       return <div className='table' onClick={this.onClick.bind(this)}>
         <TableHead />
         {PLAYER_HANDS.map((group, i) => {
@@ -131,7 +132,7 @@ class Table extends React.Component  {
           let rows = group.map((hand, j) => {
             return <Row
               key={window.k++}
-              jackfish={this.props.jackfish}
+              jackfish={window.jackfish}
               onSelect={this.onSelect.bind(this)}
               selection={this.state.selection}
               player={hand}

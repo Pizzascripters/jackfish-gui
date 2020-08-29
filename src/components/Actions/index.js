@@ -4,7 +4,7 @@ import './style.css';
 
 function Actions(props) {
   if(props.selection) {
-    let jackfish = props.jackfish;
+    let jackfish = window.jackfish;
     let peek = jackfish.getParams().peek;
     let player = props.selection[0];
     let dealer = props.selection[1];
