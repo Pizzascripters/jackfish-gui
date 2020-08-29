@@ -76,6 +76,8 @@ let scripts = document.getElementsByTagName('script');
 let mySrc = scripts[scripts.length - 1].src;
 
 function Jackfish(params_) {
+  if(!params_) params_ = {};
+
   /*-- Private variables --*/
 
   let matrices = {};
@@ -89,6 +91,7 @@ function Jackfish(params_) {
   let worker = new Worker(
     mySrc.substr(0, mySrc.lastIndexOf('/')) + '/JackfishWorker.js'
   );
+  addMissingParams();
   worker.postMessage(['setParams', [params]]);
   worker.addEventListener('message', e => {
     if(e.data[0] === 'doAll') {
@@ -105,6 +108,7 @@ function Jackfish(params_) {
 
   this.setParams = (params_, doAll) => {
     params = params_;
+    addMissingParams();
     worker.postMessage(['setParams', [params_]]);
     if(doAll) {
       let listener;
@@ -210,10 +214,6 @@ function Jackfish(params_) {
     table = all.table;
     insurance = all.insurance;
     edge = all.edge;
-    console.log(
-      this.getHit(16, 9),
-      this.getStand(16, 9)
-    )
     loaded = true;
   }
 
@@ -263,6 +263,60 @@ function Jackfish(params_) {
       return matrices[name][rowIndexer.indexOf(i)][colIndexer.indexOf(j)];
     } else {
       return matrices[name];
+    }
+  }
+
+  function addMissingParams() {
+    if(!params.blackjack) params.blackjack = 1.5;
+    if(!params.count) params.count = { system: 'none' };
+    if(params.peek === undefined) params.peek = true;
+    if(params.soft17 === undefined) params.soft17 = true;
+    if(!params.surrender) params.surrender = 'none';
+
+    if(!params.count.system) params.count.system = 'none';
+    if(!params.count.decks) params.count.decks = 6;
+    if(params.count.system !== 'none' && !params.count.tc && !params.count.count) {
+      params.count.tc = 0;
+      params.count.count = 0;
+    } else if(params.count.system !== 'none' && !params.count.tc) {
+      params.count.count = 0;
+    } else if(params.count.system !== 'none' && !params.count.count) {
+      params.count.tc = 0;
+    }
+
+    if(!params.double) {
+      params.double = {anytime: false, min: 0};
+    }
+    if(params.double.anytime === undefined) {
+      params.double.anytime = false;
+    }
+    if(params.double.min === undefined) {
+      params.double.min = 0;
+    }
+
+    if(!params.split) {
+      params.split = {
+        double: true,
+        maxHands: Infinity,
+        oneCardAfterAce: true,
+        resplit: true,
+        resplitAces: true
+      };
+    }
+    if(params.split.double === undefined) {
+      params.split.double = true;
+    }
+    if(!params.split.maxHands) {
+      params.split.maxHands = Infinity;
+    }
+    if(params.split.oneCardAfterAce === undefined) {
+      params.split.oneCardAfterAce = true;
+    }
+    if(params.split.resplit === undefined) {
+      params.resplit = true;
+    }
+    if(params.split.resplitAces === undefined) {
+      params.resplitAces = true;
     }
   }
 }

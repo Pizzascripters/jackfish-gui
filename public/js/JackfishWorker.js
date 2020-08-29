@@ -219,8 +219,8 @@ function Jackfish(cb, params) {
         function doCell() {
           let move = bestMove(comp, player & 0x3f, dealer, pair);
           if(!pair) {
-            rsM[n][j] = move.ret;
-            rdM[n][j] = move.retNS;
+            rsM[n][j] = move.expected;
+            rdM[n][j] = move.expectedNS;
             rM[n][j] = Math.max(standM[n][j], hitM[n][j]);
           }
           if(m !== -1) {
@@ -293,7 +293,7 @@ function Jackfish(cb, params) {
         let k = HAND_STATES.indexOf(hand);
         let pairOdds = shiftedComp[i] * shiftedComp[i];
         state[k] -= pairOdds;
-        rPair.push(pairOdds * table[TABLE_HANDS.indexOf(card+PAIR)][j].retNS);
+        rPair.push(pairOdds * table[TABLE_HANDS.indexOf(card+PAIR)][j].expectedNS);
       });
       let r = dot(state, transpose(rsM)[j]) + vtotal(rPair);
       let insurance = 0;
@@ -989,15 +989,15 @@ function Jackfish(cb, params) {
     }
 
     // Determine if surrendering is best
-    if(sur > best.ret) {
-      best.ret = sur;
+    if(sur > best.expected) {
+      best.expected = sur;
       best.surrender = true;
     }
 
-    function Best(action, ret) {
+    function Best(action, expected) {
       this.action = action;
-      this.ret = ret;   // Return with surrender
-      this.retNS = ret; // Return with no surrender
+      this.expected = expected; // Expected return with surrender
+      this.expectedNS = expected; // Expected return with no surrender
       this.surrender = false;
     }
 

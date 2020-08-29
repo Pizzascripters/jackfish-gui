@@ -9,37 +9,24 @@ Add the following line of code to your html file:
 
 ## Example
 ```JavaScript
-let params = {
-  blackjack: 1.5, // 3:2 pay
-  peek: true, // Peek hole card
-  soft17: true, // Hits soft 17
+let jackfish = new Jackfish({
   surrender: 'late',
   count: {
     system: 'hilo',
     count: 12,
     tc: 4, // True Count
     decks: 3
-  },
-  double: {
-    anytime: false,
-    min: 9
-  },
-  split: {
-    double: true, // Double after split
-    maxHands: 4,
-    oneCardAfterAce: true,
-    resplit: true,
-    resplitAces: true
   }
-}
+});
 
-let jackfish = new Jackfish(params);
 jackfish.doAll();
-jackfish.getEdge();              // 0.0131955171757095
-jackfish.takeInsurance();        // true
-jackfish.getHit(16, 9),          // -0.5093939657864434
-jackfish.getStand(16, 9)         // -0.5414794109351144
-jackfish.getTable(16, 9).action; // "S"
+
+jackfish.getEdge();                 // 0.016476440033674107
+jackfish.takeInsurance();           // true
+jackfish.getHit(16, 9);             // -0.5538886717476285
+jackfish.getStand(16, 9);           // -0.5537391635562128
+jackfish.getTable(16, 9).action;    // "S"
+jackfish.getTable(16, 9).surrender; // true
 ```
 
 ## Contributions
