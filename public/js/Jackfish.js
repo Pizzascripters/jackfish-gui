@@ -92,7 +92,7 @@ function Jackfish(params_) {
     mySrc.substr(0, mySrc.lastIndexOf('/')) + '/JackfishWorker.js'
   );
   addMissingParams();
-  worker.postMessage(['setParams', [params]]);
+  worker.postMessage(['Constructor', [params]]);
   worker.addEventListener('message', e => {
     if(e.data[0] === 'doAll') {
       isLoaded = true;
@@ -319,6 +319,8 @@ function Jackfish(params_) {
       params.resplitAces = true;
     }
   }
+
+  this.setParams(params, true);
 }
 
 /*-- Utility functions --*/
