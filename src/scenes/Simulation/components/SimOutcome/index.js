@@ -104,14 +104,14 @@ class SimOutcome extends React.Component {
 
   onToggle(enabled) {
     if(enabled) {
-      this.props.jackfish.runSimulation(this.onUpdate.bind(this));
+      window.jackfish.runSimulation(this.onUpdate.bind(this));
     } else {
-      this.props.jackfish.stopSimulation(this.onUpdate.bind(this));
+      window.jackfish.stopSimulation(this.onUpdate.bind(this));
     }
   }
 
   onClear() {
-    this.props.jackfish.clearSimulation(this.onUpdate.bind(this));
+    window.jackfish.clearSimulation(this.onUpdate.bind(this));
   }
 
   render() {

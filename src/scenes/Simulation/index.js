@@ -1,5 +1,4 @@
 import React from 'react';
-import Jackfish from '../../lib/main.js';
 import Parameters from '../../components/Parameters';
 import SimOutcome from './components/SimOutcome';
 import SimRules from './components/SimRules';
@@ -8,13 +7,12 @@ import './style.css';
 class Simulation extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { selection: null, jackfish: new Jackfish() };
+    this.state = { selection: null };
     this.simCreated = false;
   }
 
   updateEngine(params) {
-    let jackfish = this.state.jackfish;
-    jackfish.setParams(params);
+    window.jackfish.setParams(params);
   }
 
   onUpdateRules(options) {
@@ -22,9 +20,9 @@ class Simulation extends React.Component {
       delete rule.onChange;
     }
     if(this.simCreated) {
-      this.state.jackfish.updateSimulation(options);
+      window.jackfish.updateSimulation(options);
     } else {
-      this.state.jackfish.createSimulation(options);
+      window.jackfish.createSimulation(options);
       this.simCreated = true;
     }
   }
@@ -34,9 +32,7 @@ class Simulation extends React.Component {
       <Parameters
         updateEngine={this.updateEngine.bind(this)}
       />
-      <SimOutcome
-        jackfish={this.state.jackfish}
-      />
+      <SimOutcome />
       <SimRules
         onUpdate={this.onUpdateRules.bind(this)}
       />

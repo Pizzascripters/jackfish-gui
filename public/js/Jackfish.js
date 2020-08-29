@@ -76,7 +76,7 @@ function Jackfish(params_) {
 
     for(let listener of listeners) {
       if(listener.event === e.data[0]) {
-        listener.f();
+        listener.f(e.data[1]);
       }
     }
   });
@@ -93,6 +93,11 @@ function Jackfish(params_) {
     }
   }
 
+  this.setCount = (count, doAll) => {
+    params.count = count;
+    this.setParams(params, doAll);
+  }
+
   this.getBJOdds = dealer => {
     if(dealer === ACE || dealer === 11) dealer = DEALER_ACE;
     if(dealer === 10) dealer = DEALER_TEN;
@@ -105,19 +110,22 @@ function Jackfish(params_) {
   }
 
   // Simulation functions
+  this.createSimulation = (options) => {
+    worker.postMessage(['createSimulation', [options]]);
+  }
   this.updateSimulation = (options) => {
     worker.postMessage(['updateSimulation', [options]]);
   }
   this.runSimulation = (cb) => {
-    createSimCallback(cb);
+    createSimCallback.bind(this)(cb);
     worker.postMessage(['runSimulation', []]);
   }
   this.clearSimulation = (cb) => {
-    createSimCallback(cb);
+    createSimCallback.bind(this)(cb);
     worker.postMessage(['clearSimulation', []]);
   }
   this.stopSimulation = (cb) => {
-    createSimCallback(cb);
+    createSimCallback.bind(this)(cb);
     worker.postMessage(['stopSimulation', []]);
   }
 
@@ -158,7 +166,10 @@ function Jackfish(params_) {
 
   this.isLoaded = () => isLoaded;
   this.getParams = () => params;
+  this.getDoubleRules = () => params.double;
+  this.getSplitRules = () => params.split;
   this.getCount = () => params.count;
+  this.getBlackjackPay = () => params.blackjack;
   this.getEdge = () => edge;
   this.takeInsurance = () => insurance;
 
@@ -181,16 +192,22 @@ function Jackfish(params_) {
   }
 
   function createSimCallback(cb) {
-    function callback() {
-      cb(...arguments);
+    function callback(data) {
+      cb(data);
+    }
+
+    function stopCallback(data) {
+      cb(data);
       this.removeListener(l1);
       this.removeListener(l2);
       this.removeListener(l3);
+      this.removeListener(l4);
     }
 
-    let l1 = this.addListener('runSimulation', callback);
-    let l2 = this.addListener('clearSimulation', callback);
-    let l3 = this.addListener('stopSimulation', callback);
+    let l1 = this.addListener('runSimulation', callback.bind(this));
+    let l2 = this.addListener('clearSimulation', callback.bind(this));
+    let l3 = this.addListener('stopSimulation', stopCallback.bind(this));
+    let l4 = this.addListener('updateSimulation', callback.bind(this));
   }
 
   function indexMatrix(name, rowIndexer, colIndexer, i, j) {

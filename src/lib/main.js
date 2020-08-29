@@ -81,14 +81,7 @@ const SYSTEM_NAMES = {
 }
 
 /*-- Private Variables --*/
-let params;
 let practiceParams = {};
-let comp;
-let bjOdds;
-let endM, standM, doubleM;
-let simCallback;
-let loaded = false;
-let listeners = [];
 let countTableRequested = false,
     perfectTableRequested = false,
     countEdge = null,
@@ -103,77 +96,11 @@ let cvs, ctx,
   game = {},
   mouse = {};
 
-// Return matrices. Specifies return given player's hand and dealer's card under perfect play
-let rM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return without doubling
-// let rdM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with doubling
-let rsM = zeroes([HAND_STATES.length, DEALER_STATES.length]); // Return with surrendering
-let hitM = zeroes([HAND_STATES.length, DEALER_STATES.length]);
-let splitM = zeroes([DEALER_STATES.length, DEALER_STATES.length]);
-
-function Main(params_) {
-  params = params_;
-
-  /*-- Public Functions --*/
-
-  // Positive number indicates player has an edge
-  this.isLoaded = () => loaded;
-  this.getCount = () => params.count;
-  this.getComp = () => comp;
-  this.getParams = () => params;
-  this.getReturn = () => rsM;
-  this.getReturnNoDouble = () => rM;
-  this.getEnd = (dealer, end) => {
-    return iDSMatrix(endM, dealer, end);
-  }
-  this.getHit = (player, dealer) => {
-    return iSDMatrix(hitM, player, dealer);
-  }
-  this.getStand = (player, dealer) => {
-    return iSDMatrix(standM, player, dealer);
-  }
-  this.getDouble = (player, dealer) => {
-    return iSDMatrix(doubleM, player, dealer);
-  }
-  this.getSplit = (player, dealer) => {
-    return iDDMatrix(splitM, player, dealer);
-  }
+function Main(params) {
   this.setPracticeParams = (practiceParams_) => {
     practiceParams = practiceParams_;
   }
-  this.createSimulation = (options) => {
-    worker.postMessage(['createSimulation', [options]]);
-  }
-  this.updateSimulation = (options) => {
-    worker.postMessage(['updateSimulation', [options]]);
-  }
-  this.runSimulation = (cb) => {
-    simCallback = cb;
-    worker.postMessage(['runSimulation', []]);
-  }
-  this.clearSimulation = (cb) => {
-    simCallback = cb;
-    worker.postMessage(['clearSimulation', []]);
-  }
-  this.stopSimulation = (cb) => {
-    simCallback = cb;
-    worker.postMessage(['stopSimulation', []]);
-  }
-  this.addListener = (f) => {
-    listeners.push(f);
-  }
-  this.removeListener = (f) => {
-    for(let g of listeners) {
-      if(f === g) {
-        listeners.splice(listeners.indexOf(g), 1);
-        break;
-      }
-    }
-  }
-  this.getBJOdds = (dealer) => {
-    if(dealer === ACE || dealer === 11) dealer = DEALER_ACE;
-    if(dealer === 10) dealer = DEALER_TEN;
-    return bjOdds[DEALER_STATES.indexOf(dealer)];
-  }
+
   defineConstants.bind(this)([
     ['BLACKJACK', BLACKJACK],
     ['BUST', BUST],
@@ -201,34 +128,6 @@ function Main(params_) {
 
   window.jackfish = this.jackfish = new window.Jackfish(params);
 }
-
-/*-- Worker --*/
-// for computationally heavy tasks
-let worker = new Worker('js/JackfishWorker.js');
-worker.postMessage(['Constructor', [params]]);
-worker.addEventListener('message', e => {
-  if(e.data[0] === 'setParams') {
-    worker.postMessage(['doAll']);
-  } else if(e.data[0] === 'doAll') {
-    // Unpack data
-    let all = e.data[1];
-    bjOdds = all.bjOdds;
-    standM = all.matrices.standM;
-    doubleM = all.matrices.doubleM;
-    endM = all.matrices.endM;
-    rM = all.matrices.rM;
-    // rdM = all.matrices.rdM;
-    rsM = all.matrices.rsM;
-    hitM = all.matrices.hitM;
-    splitM = all.matrices.splitM;
-    loaded = true;
-    for(let listener of listeners) {
-      listener();
-    }
-  } else if(e.data[0].endsWith('Simulation')) {
-    if(simCallback) simCallback(e.data[1]);
-  }
-});
 
 /*-- Practice --*/
 window.startPractice = (jackfish) => {
@@ -294,7 +193,7 @@ function finishHand() {
     game.stage = STAGES.REVEALING;
   } else if(game.active === 5 && game.stage === STAGES.INSURANCE) {
     // Peek ace showing
-    if(params.peek && getValue(game.dealer) === Infinity) {
+    if(window.jackfish.getParams().peek && getValue(game.dealer) === Infinity) {
       game.stage = STAGES.REVEALING;
       game.active = null;
     } else {
@@ -354,13 +253,12 @@ function generateAITables(hilo, omega, cb) {
         cb();
       }
     } else {
-      params.count = {
+      this.jackfish.setCount({
         system,
         tc,
         count: tc * game.count.decks / 2,
         decks: game.count.decks / 2
-      };
-      this.jackfish.setParams(params, true);
+      }, true);
     }
   }
   makeTable.bind(this)();
@@ -371,12 +269,12 @@ function startFrameCycle(images_) {
   oldTime = 0;
   game = {};
   game.new = () => {
-    game.count = deepCopy(params.count);
+    game.count = deepCopy(this.jackfish.getCount());
     game.cash = practiceParams.cash;
     game.originalBets = [0, 0, 0, 0, 0];
     game.bets = [0, 0, 0, 0, 0];
     game.decks = game.count.decks;
-    game.shoe = new Shoe(this);
+    game.shoe = new Shoe(this.jackfish);
     game.boxes = [];
 
     let anyCC = false;
@@ -420,7 +318,7 @@ function startFrameCycle(images_) {
 
     // Reset if shoe is too small
     if(game.shoe.getSize() < 52 * practiceParams.penetration) {
-      game.shoe = new Shoe(this);
+      game.shoe = new Shoe(this.jackfish);
     }
   }
   game.new();
@@ -448,7 +346,7 @@ function frame(time) {
 
   function getReturn(pValue, dValue, natural) {
     if(pValue === Infinity && dValue !== Infinity) {
-      return natural ? params.blackjack : 1;
+      return natural ? this.jackfish.getBlackjackPay() : 1;
     } else if(pValue > dValue) {
       return 1;
     } else if(pValue < dValue || pValue === -1) {
@@ -642,14 +540,14 @@ function frame(time) {
   game.canHit = a && (
     (game.unfinished[game.active].length === 0 && game.finished[game.active].length === 0) ||
     game.players[game.active][0][0] !== 'A' ||
-    !params.split.oneCardAfterAce
+    !this.jackfish.getParams().split.oneCardAfterAce
   );
   game.canStand = a;
   game.canDouble = a && (
-    (params.double.anytime || game.players[game.active].length === 2) && // Double anytime
-    getValue(game.players[game.active]) >= params.double.min && // Minimum double
+    (this.jackfish.getDoubleRules().anytime || game.players[game.active].length === 2) && // Double anytime
+    getValue(game.players[game.active]) >= this.jackfish.getDoubleRules().min && // Minimum double
     (
-      params.split.double ||
+      this.jackfish.getSplitRules().double ||
       (
         game.unfinished[game.active].length === 0 &&
         game.finished[game.active].length === 0
@@ -661,27 +559,29 @@ function frame(time) {
     game.players[game.active].length === 2 &&
     getValue([game.players[game.active][0]]) === getValue([game.players[game.active][1]]) &&
     game.cash >= game.bets[game.active] &&
-    game.unfinished[game.active].length + game.finished[game.active].length <= params.split.maxHands - 2 &&
+    game.unfinished[game.active].length + game.finished[game.active].length <= this.jackfish.getSplitRules().maxHands - 2 &&
     (
-      params.split.resplit ||
+      this.jackfish.getSplitRules().resplit ||
       (game.unfinished[game.active].length === 0 && game.finished[game.active].length === 0)
     )
   );
   game.canSurrender = b && (
       (
-        params.surrender === 'late' &&
+        this.jackfish.getParams().surrender === 'late' &&
+        game.players[game.active] &&
         game.players[game.active].length === 2 &&
         game.unfinished[game.active].length === 0 &&
         game.finished[game.active].length === 0 &&
         game.stage === STAGES.PLAYING
       ) ||
       (
-        params.surrender === 'early' &&
+        this.jackfish.getParams().surrender === 'early' &&
         game.stage === STAGES.INSURANCE
       )
   );
   game.canInsurance = b && (
     game.stage === STAGES.INSURANCE &&
+    game.dealer[1][0] === 'A' &&
     game.cash >= game.bets[game.active] / 2
   );
 
@@ -713,37 +613,38 @@ function frame(time) {
   if(countEdge === null && game.count.system !== 'none') {
     if(!countTableRequested) {
       if(!makingAITables) {
-        params.count.system = game.count.system;
+        this.jackfish.getCount().system = game.count.system;
         countTableRequested = true;
-        this.jackfish.setParams(params, true);
+        this.jackfish.doAll();
         let listener = this.jackfish.addListener('doAll', () => {
           countEdge = this.jackfish.getEdge();
-          countInsurance = this.jackfish.getEdge();
+          countInsurance = this.jackfish.takeInsurance();
           countTable = deepCopy(this.jackfish.getTable());
           countTableRequested = false;
-          this.removeListener(listener);
+          this.jackfish.removeListener(listener);
         });
       }
     }
   } else if(perfectEdge === null) {
     if(!perfectTableRequested) {
-      params.count = {
+      let count = this.jackfish.getCount();
+      this.jackfish.setCount({
         system: 'perfect',
         comp: game.shoe.getComp(),
-        count: params.count.count,
-        tc: params.count.tc,
-        decks: params.count.decks
-      }
+        count: count.count,
+        tc: count.tc,
+        decks: count.decks
+      });
 
       perfectTableRequested = true;
-      this.jackfish.setParams(params, true);
+      this.jackfish.doAll();
       let listener = this.jackfish.addListener('doAll', () => {
         perfectEdge = this.jackfish.getEdge();
         perfectInsurance = this.jackfish.takeInsurance();
         perfectTable = deepCopy(this.jackfish.getTable());
         perfectTableRequested = false;
-        this.removeListener(listener);
-        params.count = deepCopy(game.count);
+        this.jackfish.removeListener(listener);
+        this.jackfish.setCount(deepCopy(game.count));
       });
     }
   }
@@ -814,8 +715,8 @@ function frame(time) {
           game.players[i][0] &&
           game.players[i][1] &&
           game.players[i][0][0] === 'A' && // First card is ace
-          params.split.oneCardAfterAce &&
-          (game.players[i][1][0] !== 'A' || !params.split.resplitAces) &&
+          this.jackfish.getSplitRules().oneCardAfterAce &&
+          (game.players[i][1][0] !== 'A' || !this.jackfish.getSplitRules().resplitAces) &&
           game.players[i].length === 2
         ) ||
         // If less than table maximum, skip hand
@@ -938,7 +839,7 @@ function frame(time) {
     }
 
     if(game.stage === STAGES.DEALING && finishedDealing && game.dealCooldown <= 0) {
-      if(game.dealer[1][0] === 'A' || params.surrender === 'early') {
+      if(game.dealer[1][0] === 'A' || this.jackfish.getParams().surrender === 'early') {
         game.active = 0;
         game.stage = STAGES.INSURANCE;
         if(!game.boxes[0].ai) {
@@ -946,7 +847,7 @@ function frame(time) {
         } else {
           game.generalCooldown = DEAL_COOLDOWN;
         }
-      } else if(params.peek && getValue(game.dealer) === Infinity) {
+      } else if(this.jackfish.getParams().peek && getValue(game.dealer) === Infinity) {
         // Peek 10 showing blackjack
         game.stage = STAGES.REVEALING;
         game.active = null;
@@ -985,7 +886,7 @@ function frame(time) {
   // If players are finished, do dealer
   if(game.stage === STAGES.REVEALING && game.dealCooldown <= 0) {
     let value = getValue(game.dealer);
-    if((value < 17 || (params.soft17 && value === 17 && isSoft(game.dealer))) && value !== -1) {
+    if((value < 17 || (this.jackfish.getParams().soft17 && value === 17 && isSoft(game.dealer))) && value !== -1) {
       game.dealer.push(game.shoe.draw());
       game.dealCooldown = DEAL_COOLDOWN;
     } else {
@@ -1021,7 +922,7 @@ function frame(time) {
     if(makingAITables) {
       text = 'Making AI tables...';
     }
-  } else if(game.stage === STAGES.INSURANCE) {
+  } else if(game.stage === STAGES.INSURANCE && game.dealer[1][0] === 'A') {
     text = 'Insurance?';
   }
   if(text) {
@@ -1115,9 +1016,9 @@ function Shoe(jackfish) {
   this.getComp = () => vnormalize(comp);
 
   function updateCount() {
-    params.count.count = count;
-    params.count.tc = 52 * count / cards.length;
-    params.count.decks = cards.length / 52;
+    jackfish.getCount().count = count;
+    jackfish.getCount().tc = 52 * count / cards.length;
+    jackfish.getCount().decks = cards.length / 52;
   }
   updateCount();
 
@@ -1309,50 +1210,6 @@ function getHand(cards) {
     value += 0x40;
   }
   return value;
-}
-
-// Index state,state matrix: m[state][state]
-// function iSSMatrix(m, i, j) {
-//   return m[HAND_STATES.indexOf(i)][HAND_STATES.indexOf(j)];
-// }
-
-// Index state,dealer matrix: m[state][dealer]
-function iSDMatrix(m, i, j) {
-  if(j === 10) j = DEALER_TEN;
-  if(j === ACE) j = DEALER_ACE;
-  return m[HAND_STATES.indexOf(i)][DEALER_STATES.indexOf(j)];
-}
-
-// Index dealer,state matrix: m[dealer][state]
-function iDSMatrix(m, i, j) {
-  if(i === 10) i = DEALER_TEN;
-  if(i === ACE) i = DEALER_ACE;
-  return m[DEALER_STATES.indexOf(i)][HAND_STATES.indexOf(j)];
-}
-
-// Index dealer,dealer matrix: m[dealer][dealer]
-function iDDMatrix(m, i, j) {
-  return iDealer(iDealer(m, i), j);
-}
-
-// Index state array: v[state]
-// function iState(v, i) {
-//   return v[findHand(i)];
-// }
-
-// Index dealer array: v[dealer]
-function iDealer(v, i) {
-  if(i === 10) i = DEALER_TEN;
-  if(i === ACE) i = DEALER_ACE;
-  return v[findHand(i, true)];
-}
-
-function findHand(i, dealer) {
-  if(dealer) {
-    return DEALER_STATES.indexOf(i);
-  } else {
-    return HAND_STATES.indexOf(i);
-  }
 }
 
 function getCardIndex(card) {
