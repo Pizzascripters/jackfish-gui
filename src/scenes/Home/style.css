@@ -34,3 +34,20 @@
   background-color: #104010;
   flex-grow: 3;
 }
+
+#socials {
+  position: absolute;
+  top: 70px;
+  right: 20px;
+}
+
+#github-link {
+  border-radius: 32px;
+  padding: 1px;
+  transition: background-color 400ms ease;
+}
+
+#github-link:hover {
+  cursor: pointer;
+  background-color: #fff;
+}

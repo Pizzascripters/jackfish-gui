@@ -24,26 +24,18 @@ class App extends React.Component {
 
   render() {
     let content;
-    let homeSelected = '',
-        practiceSelected = '',
-        strategySelected = '',
-        simulationSelected = '';
     switch(this.state.page) {
       case 'strategy':
         content = <Strategy />;
-        strategySelected = ' selected';
         break;
       case 'simulation':
         content = <Simulation />;
-        simulationSelected = ' selected';
         break;
       case 'practice':
         content = <Practice />;
-        practiceSelected = ' selected';
         break;
       case 'home':
         content = <Home navFunctions={this.navFunctions} />;
-        homeSelected = ' selected';
         break;
       default:
         content = null;
@@ -51,22 +43,38 @@ class App extends React.Component {
     }
     return <div id='container'>
       <header>
-        <div className={'homelink' + homeSelected} onClick={this.navFunctions.home}>
-          <div>Jackfish Engine</div>
-        </div>
-        <div className={'navlink' + practiceSelected} onClick={this.navFunctions.practice}>
-          <div>Practice</div>
-        </div>
-        <div className={'navlink' + strategySelected} onClick={this.navFunctions.strategy}>
-          <div>Strategy</div>
-        </div>
-        <div className={'navlink' + simulationSelected} onClick={this.navFunctions.simulation}>
-          <div>Simulation</div>
-        </div>
+        <Link
+          name='Home'
+          text={'Jackfish Engine'}
+          homelink={true}
+          page={this.state.page}
+          onClick={this.onClick.bind(this)}
+        />
+        <Link name='Practice' page={this.state.page} onClick={this.onClick.bind(this)} />
+        <Link name='Strategy' page={this.state.page} onClick={this.onClick.bind(this)} />
+        <Link name='Simulation' page={this.state.page} onClick={this.onClick.bind(this)} />
       </header>
       {content}
     </div>;
   }
+}
+
+function Link(props) {
+  let className = 'navlink';
+  if(props.homelink) {
+    className = 'homelink';
+  }
+  let selected = '';
+  if(props.name.toLocaleLowerCase() === props.page) {
+    selected = ' selected';
+  }
+  let text = props.text;
+  if(props.text === undefined) {
+    text = props.name;
+  }
+  return <div className={className + selected} onClick={props.onClick.bind(null, props.name.toLocaleLowerCase())}>
+    <div>{text}</div>
+  </div>
 }
 
 ReactDOM.render(

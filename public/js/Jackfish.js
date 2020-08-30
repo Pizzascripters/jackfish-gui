@@ -130,9 +130,15 @@ function Jackfish(params_) {
     return bjOdds[DEALER_STATES.indexOf(dealer)];
   }
 
-  this.doAll = () => {
+  this.doAll = (callback) => {
     isLoaded = false;
     worker.postMessage(['doAll']);
+    if(callback !== undefined) {
+      let listener = this.addListener('doAll', () => {
+        this.removeListener(listener);
+        callback();
+      });
+    }
   }
 
   // Simulation functions

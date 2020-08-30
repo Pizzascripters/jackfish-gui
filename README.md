@@ -19,14 +19,14 @@ let jackfish = new Jackfish({
   }
 });
 
-jackfish.doAll();
-
-jackfish.getEdge();                 // 0.016476440033674107
-jackfish.takeInsurance();           // true
-jackfish.getHit(16, 9);             // -0.5538886717476285
-jackfish.getStand(16, 9);           // -0.5537391635562128
-jackfish.getTable(16, 9).action;    // "S"
-jackfish.getTable(16, 9).surrender; // true
+jackfish.doAll(() => {
+  jackfish.getEdge();                 // 0.016476440033674107
+  jackfish.takeInsurance();           // true
+  jackfish.getHit(16, 9);             // -0.5538886717476285
+  jackfish.getStand(16, 9);           // -0.5537391635562128
+  jackfish.getTable(16, 9).action;    // "S"
+  jackfish.getTable(16, 9).surrender; // true
+});
 ```
 
 ## Contributions

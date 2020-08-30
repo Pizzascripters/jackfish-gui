@@ -346,7 +346,7 @@ function frame(time) {
 
   function getReturn(pValue, dValue, natural) {
     if(pValue === Infinity && dValue !== Infinity) {
-      return natural ? this.jackfish.getBlackjackPay() : 1;
+      return natural ? window.jackfish.getBlackjackPay() : 1;
     } else if(pValue > dValue) {
       return 1;
     } else if(pValue < dValue || pValue === -1) {
