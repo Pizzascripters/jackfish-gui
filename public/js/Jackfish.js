@@ -246,7 +246,7 @@ function Jackfish(params_) {
     if(rowIndexer === DEALER_STATES) {
       if(i === 10) {
         i = -3;
-      } else if(i === ACE) {
+      } else if(i === ACE || i === 'A') {
         i = -4;
       }
     } else if(colIndexer === DEALER_STATES) {

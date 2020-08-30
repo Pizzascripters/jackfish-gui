@@ -5,13 +5,13 @@ import Home from './scenes/Home';
 import Strategy from './scenes/Strategy';
 import Simulation from './scenes/Simulation';
 import Practice from './scenes/Practice';
+import Install from './scenes/Install';
 
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = { page: 'home' };
     this.navFunctions = {
-      'home': this.onClick.bind(this, 'home'),
       'practice': this.onClick.bind(this, 'practice'),
       'strategy': this.onClick.bind(this, 'strategy'),
       'simulation': this.onClick.bind(this, 'simulation'),
@@ -37,6 +37,9 @@ class App extends React.Component {
       case 'home':
         content = <Home navFunctions={this.navFunctions} />;
         break;
+      case 'install':
+        content = <Install />;
+        break;
       default:
         content = null;
         break;
@@ -53,6 +56,9 @@ class App extends React.Component {
         <Link name='Practice' page={this.state.page} onClick={this.onClick.bind(this)} />
         <Link name='Strategy' page={this.state.page} onClick={this.onClick.bind(this)} />
         <Link name='Simulation' page={this.state.page} onClick={this.onClick.bind(this)} />
+        <div className='right'>
+          <Link name='Install' page={this.state.page} onClick={this.onClick.bind(this)} />
+        </div>
       </header>
       {content}
     </div>;
@@ -64,15 +70,14 @@ function Link(props) {
   if(props.homelink) {
     className = 'homelink';
   }
-  let selected = '';
   if(props.name.toLocaleLowerCase() === props.page) {
-    selected = ' selected';
+    className += ' selected';
   }
   let text = props.text;
   if(props.text === undefined) {
     text = props.name;
   }
-  return <div className={className + selected} onClick={props.onClick.bind(null, props.name.toLocaleLowerCase())}>
+  return <div className={className} onClick={props.onClick.bind(null, props.name.toLocaleLowerCase())}>
     <div>{text}</div>
   </div>
 }

@@ -17,6 +17,23 @@ body {
   height: 100vh;
 }
 
+h1 {
+  font-size: 48px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  display: block;
+}
+
+a {
+  color: #fff;
+  margin: 0 5px;
+}
+
+a:active {
+  color: #ddd;
+}
+
 header {
   display: flex;
   justify-content: flex-start;
@@ -118,6 +135,14 @@ button.bigButton:active {
   visibility: hidden;
 }
 
-.blocklink {
-
+header > .right {
+  position: absolute;
+  display: flex;
+  justify-content: flex-start;
+  height: 50px;
+  right: 0;
+}
+header > .right > div {
+  border-left: 1px solid #aaa;
+  border-right: none;
 }

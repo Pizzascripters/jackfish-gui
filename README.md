@@ -5,7 +5,9 @@ A JavaScript engine for determining player edge and perfect strategy for standar
 Add ```Jackfish.js``` and ```JackfishWorker.js``` to your project directory.
 Add the following line of code to your html file:
 
-```<script type='text/javascript' src='Jackfish.js'></script>```
+```html
+<script type='text/javascript' src='Jackfish.js'></script>
+```
 
 ## Example
 ```JavaScript
