@@ -52,14 +52,40 @@
   background-color: #fff;
 }
 
+@media only screen and (max-width: 1400px) {
+  #project-description {
+    font-size: 1.5vw;
+  }
+}
+
 @media only screen and (max-width: 800px) {
   #socials {
     top: 120px;
+  }
+
+  #project-title {
+    font-size: 15vw;
+  }
+
+  #project-description {
+    font-size: 3vw;
+  }
+
+  .homelinks {
+    flex-direction: column;
+  }
+
+  .blocklink {
+    font-size: 4vw;
   }
 }
 
 @media only screen and (max-width: 600px) {
   #socials {
     top: 70px;
+  }
+
+  .blocklink {
+    font-size: 6vw;
   }
 }
