@@ -1,0 +1,36 @@
+#project-title {
+  font-family: 'Poppins', sans-serif;
+  font-size: 10vw;
+  text-align: center;
+}
+
+#project-description {
+  font-family: 'Lexend Peta', sans-serif;
+  font-style: italic;
+  font-size: 1vw;
+  text-align: center;
+}
+
+.homelinks {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+}
+
+.blocklink {
+  border-radius: 10px;
+  flex-grow: 2;
+  margin: 2vw;
+  padding: 10vw 0;
+  text-align: center;
+  font-size: 2.5vw;
+  background-color: #101010;
+  transition: flex-grow 500ms ease, background-color 500ms ease;
+}
+
+.blocklink:hover {
+  cursor: pointer;
+  background-color: #104010;
+  flex-grow: 3;
+}

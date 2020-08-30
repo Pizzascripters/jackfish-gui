@@ -1,4 +1,5 @@
 import React from 'react';
+import Main from '../../lib/main.js';
 import Parameters from '../../components/Parameters';
 import SimOutcome from './components/SimOutcome';
 import SimRules from './components/SimRules';
@@ -8,11 +9,17 @@ class Simulation extends React.Component {
   constructor(props) {
     super(props);
     this.state = { selection: null };
+    this.main = null;
     this.simCreated = false;
   }
 
   updateEngine(params) {
-    window.jackfish.setParams(params);
+    let main = this.main;
+    if(!main) {
+      this.main = new Main(params);
+    } else {
+      main.jackfish.setParams(params);
+    }
   }
 
   onUpdateRules(options) {
