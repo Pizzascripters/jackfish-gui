@@ -146,7 +146,7 @@ class SimRules extends React.Component {
         onChange={this.onChangeMaxCash.bind(this)}
         value={this.state.maxCash}
         emptyValue={Infinity} /><br /><br />
-      Yellow Card Location: <Num
+      Cut Card Location: <Num
         onChange={this.onChangeYellow.bind(this)}
         value={this.state.yellow}
         emptyValue={0} /><br />

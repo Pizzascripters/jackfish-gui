@@ -7,7 +7,36 @@ const DEFAULT_DATA = [];
 class Graph extends React.Component {
   constructor(props) {
     super(props);
+    this.ref = React.createRef();
     this.state = {data: []};
+  }
+
+  componentDidMount() {
+    window.addEventListener('click', this.clickListener.bind(this));
+  }
+
+  clickListener(e) {
+    if(this.ref.current === null) {
+      return;
+    }
+    let stateCopy = this.state;
+    Object.keys(this.state).forEach((key) => {
+      if(key === 'data') return;
+      if(stateCopy[key] === true) {
+        stateCopy[key] = 1;
+      } else {
+        stateCopy[key] = false;
+      }
+    });
+    this.setState(stateCopy);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('click', this.clickListener)
+  }
+
+  onClick(key) {
+    this.onMouseEnter(key);
   }
 
   onMouseEnter(key) {
@@ -33,7 +62,7 @@ class Graph extends React.Component {
       total = 0;
       data = DEFAULT_DATA;
     }
-    return <div className='graphContainer'>
+    return <div className='graphContainer' ref={this.ref}>
       <div className='graph'>
         {data.map((column, i) => {
           let style = {
@@ -44,6 +73,7 @@ class Graph extends React.Component {
           }
           return <div
             key={i}
+            onClick={this.onClick.bind(this, i)}
             onMouseEnter={this.onMouseEnter.bind(this, i)}
             onMouseLeave={this.onMouseLeave.bind(this, i)}
             className='columnContainer'>
