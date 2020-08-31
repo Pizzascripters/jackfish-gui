@@ -89,7 +89,8 @@ let countTableRequested = false,
     countTable = null,
     perfectTable = null,
     countInsurance = null,
-    perfectInsurance = null;
+    perfectInsurance = null,
+    numBoxes = null;
 let cvs, ctx,
   oldTime = 0,
   images = {},
@@ -139,16 +140,22 @@ window.startPractice = (jackfish) => {
       mouse.y = e.clientY - cvs.getBoundingClientRect().y;
     });
     cvs.addEventListener('mousedown', (e) => {
+      mouse.x = e.clientX - cvs.getBoundingClientRect().x;
+      mouse.y = e.clientY - cvs.getBoundingClientRect().y;
       mouse.down = true;
-    });
-    cvs.addEventListener('mouseup', (e) => {
-      mouse.down = false;
     });
 
     function setSize() {
       if(cvs === null) return;
       cvs.width = cvs.clientWidth;
       cvs.height = cvs.clientHeight;
+      if(cvs.width < 600) {
+        numBoxes = 3;
+      } else if(cvs.width < 800) {
+        numBoxes = 4;
+      } else {
+        numBoxes = 5;
+      }
     }
     window.addEventListener('resize', setSize);
     setSize();
@@ -187,11 +194,11 @@ function finishHand() {
       game.players[game.active] = game.unfinished[game.active].pop();
       game.bets[game.active] = game.unfinishedBets[game.active].pop();
     }, DEAL_COOLDOWN);
-  } else if(++game.active === 5 && game.stage === STAGES.PLAYING) {
+  } else if(++game.active === numBoxes && game.stage === STAGES.PLAYING) {
     game.dealCooldown = DEAL_COOLDOWN;
     game.active = null;
     game.stage = STAGES.REVEALING;
-  } else if(game.active === 5 && game.stage === STAGES.INSURANCE) {
+  } else if(game.active === numBoxes && game.stage === STAGES.INSURANCE) {
     // Peek ace showing
     if(window.jackfish.getParams().peek && getValue(game.dealer) === Infinity) {
       game.stage = STAGES.REVEALING;
@@ -228,7 +235,7 @@ function generateAITables(hilo, omega, cb) {
     }
     if(system === 'omega2' && !omega) {
       makingAITables = false;
-      this.removeListener(listener);
+      this.jackfish.removeListener(listener);
       if(cb) {
         cb();
       }
@@ -332,7 +339,7 @@ function frame(time) {
   let delta = time - oldTime;
   oldTime = time;
 
-  const CARD_WIDTH = cvs.width / 12;
+  const CARD_WIDTH = cvs.width / 2.5 / numBoxes;
   const CARD_HEIGHT = 1056 * CARD_WIDTH / 691;
 
   function drawCard(card, x, y, n) {
@@ -606,8 +613,15 @@ function frame(time) {
   let text = `$${game.cash}`;
   ctx.fillText(text, cvs.width - ctx.measureText(text).width - 20, 62);
   ctx.font = '32px Noto Sans';
-  ctx.fillText(`${52 * game.decks - game.shoe.getSize()} cards discarded`, 20, 52);
-  ctx.fillText(`${game.shoe.getSize()} cards left in shoe`, 20, 84);
+  let y = 52;
+  if(cvs.width < 1000) {
+    ctx.font = '24px Noto Sans';
+  }
+  if(cvs.width < 420) {
+    y = 92;
+  }
+  ctx.fillText(`${52 * game.decks - game.shoe.getSize()} cards discarded`, 20, y);
+  ctx.fillText(`${game.shoe.getSize()} cards left in shoe`, 20, y + 32);
 
   // Generate count and perfect tables
   if(countEdge === null && game.count.system !== 'none') {
@@ -689,18 +703,22 @@ function frame(time) {
     ) {
       card = 'back';
     }
-    drawCard(card, .5, .02, i);
+    if(cvs.width < 600) {
+      drawCard(card, .5, .25, i);
+    } else {
+      drawCard(card, .5, .02, i);
+    }
   });
 
   // Draw player cards
   game.players.forEach((player, i) => {
-    if(game.active === null || game.active >= 5 || game.active === i) {
+    if(game.active === null || game.active >= numBoxes || game.active === i) {
       ctx.globalAlpha = 1;
     } else {
       ctx.globalAlpha = .2;
     }
     player.forEach((card, j) => {
-      drawCard(card, (i+1)/6 + CARD_WIDTH / cvs.width / 6, .55, j);
+      drawCard(card, (i+1)/(numBoxes+1) + CARD_WIDTH / cvs.width / (numBoxes+1), .55, j);
     });
 
     // Check if player is 21 or bust or not betting
@@ -735,10 +753,10 @@ function frame(time) {
   ctx.globalAlpha = 1;
 
   // Draw boxes
-  for(let i = 0; i < 5; i++) {
-    let x = cvs.width * (i+1)/6;
-    let y = cvs.height * .9;
-    let r = cvs.height * .05;
+  for(let i = 0; i < numBoxes; i++) {
+    let r = 32;
+    let x = cvs.width * (i+1)/(numBoxes+1);
+    let y = cvs.height - 2 * r;
 
     ctx.strokeStyle = game.insurance[i] ? '#f77' : '#fff';
     if(game.active === i) {
@@ -754,15 +772,15 @@ function frame(time) {
     if(game.bets[i] !== 0) {
       ctx.fillText(
         game.bets[i],
-        cvs.width * (i+1)/6 - ctx.measureText(game.bets[i]).width / 2,
-        cvs.height * .9 + 8
+        cvs.width * (i+1)/(numBoxes+1) - ctx.measureText(game.bets[i]).width / 2,
+        y + 8
       );
     }
     if(game.boxes[i].ai) {
       ctx.fillText(
         'AI',
-        cvs.width * (i+1)/6 - ctx.measureText('AI').width / 2,
-        cvs.height * .9 + r + 20
+        cvs.width * (i+1)/(numBoxes+1) - ctx.measureText('AI').width / 2,
+        y + r + 20
       );
     }
 
@@ -926,8 +944,9 @@ function frame(time) {
     text = 'Insurance?';
   }
   if(text) {
+    let fontSize = Math.floor(cvs.width / 8)
     ctx.fillStyle = '#fff';
-    ctx.font = '96px Noto Sans';
+    ctx.font = `${fontSize}px Noto Sans`;
     let width = ctx.measureText(text).width;
     let height = 96;
     let x = cvs.width / 2 - width / 2;
@@ -959,6 +978,8 @@ function frame(time) {
   if(document.getElementById('cvs') !== null) {
     window.requestAnimationFrame(frame.bind(this));
   }
+
+  mouse.down = false;
 }
 
 // A shoe that keeps count

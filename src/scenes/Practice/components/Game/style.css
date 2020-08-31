@@ -26,12 +26,15 @@
 
 #chips {
   height: 64px;
-  padding: 20px;
+  max-height: 10vw;
+  padding: 1vw;
 }
 
 #chips img {
   float: right;
-  margin-left: 20px;
+  margin-left: 1vw;
+  max-width: 10%;
+  height: auto;
 }
 #chips img:hover {
   cursor: pointer;
@@ -41,4 +44,10 @@ button.gray {
   background-color: #666 !important;
   color: #bbb;
   cursor: auto !important;
+}
+
+@media only screen and (max-width: 800px) {
+  #actions button {
+    font-size: 2.5vw;
+  }
 }
