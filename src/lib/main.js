@@ -351,6 +351,22 @@ function frame(time) {
     );
   }
 
+  function drawTotal(hand, x, y) {
+    ctx.fillStyle = '#fff'
+    ctx.font = '30px Noto Sans';
+    let value = getValue(hand);
+    if(value !== 0) {
+      if(value === -1) {
+        value = 'Bust';
+      } else if(value === Infinity) {
+        value = 'BJ';
+      } else if(isSoft(hand)) {
+        value = `${value - 10}/${value}`;
+      }
+      ctx.fillText(value, x - ctx.measureText(value).width / 2, y);
+    }
+  }
+
   function getReturn(pValue, dValue, natural) {
     if(pValue === Infinity && dValue !== Infinity) {
       return natural ? window.jackfish.getBlackjackPay() : 1;
@@ -613,15 +629,13 @@ function frame(time) {
   let text = `$${game.cash}`;
   ctx.fillText(text, cvs.width - ctx.measureText(text).width - 20, 62);
   ctx.font = '32px Noto Sans';
-  let y = 52;
-  if(cvs.width < 1000) {
+  if(cvs.width < 420) {
+    ctx.font = '20px Noto Sans';
+  } else if(cvs.width < 1000) {
     ctx.font = '24px Noto Sans';
   }
-  if(cvs.width < 420) {
-    y = 92;
-  }
-  ctx.fillText(`${52 * game.decks - game.shoe.getSize()} cards discarded`, 20, y);
-  ctx.fillText(`${game.shoe.getSize()} cards left in shoe`, 20, y + 32);
+  ctx.fillText(`${52 * game.decks - game.shoe.getSize()} cards discarded`, 20, 52);
+  ctx.fillText(`${game.shoe.getSize()} cards left in shoe`, 20, 84);
 
   // Generate count and perfect tables
   if(countEdge === null && game.count.system !== 'none') {
@@ -706,9 +720,20 @@ function frame(time) {
     if(cvs.width < 600) {
       drawCard(card, .5, .25, i);
     } else {
-      drawCard(card, .5, .02, i);
+      drawCard(card, .5, .05, i);
     }
   });
+  let visibleHand = game.dealer;
+  if(game.stage < STAGES.REVEALING && game.dealer.length >= 2) {
+    visibleHand = [game.dealer[1]];
+  } else if(game.stage < STAGES.REVEALING) {
+    visibleHand = [];
+  }
+  if(cvs.width < 600) {
+    drawTotal(visibleHand, cvs.width / 2, cvs.height * .24);
+  } else {
+    drawTotal(visibleHand, cvs.width / 2, cvs.height * .04);
+  }
 
   // Draw player cards
   game.players.forEach((player, i) => {
@@ -720,6 +745,9 @@ function frame(time) {
     player.forEach((card, j) => {
       drawCard(card, (i+1)/(numBoxes+1) + CARD_WIDTH / cvs.width / (numBoxes+1), .55, j);
     });
+
+    // Draw total
+    drawTotal(player, cvs.width * (i+1)/(numBoxes+1), cvs.height * .54);
 
     // Check if player is 21 or bust or not betting
     if(
@@ -894,7 +922,7 @@ function frame(time) {
     game.generalCooldown <= 0
   ) {
     finishHand();
-    if(game.active !== 4 && !game.boxes[game.active].ai) {
+    if(game.active !== null && !game.boxes[game.active].ai) {
       game.generalCooldown = DEAL_COOLDOWN * 10;
     } else {
       game.generalCooldown = DEAL_COOLDOWN;
@@ -1079,6 +1107,7 @@ window.addBet = (bet) => {
 
 window.doAction = (action, ai) => {
   if(
+    game.active == null ||
     (game.boxes[game.active].ai && !ai) ||
     game.players[game.active].length < 2
   ) return;
@@ -1136,7 +1165,7 @@ window.doAction = (action, ai) => {
           game.cash -= game.bets[game.active] / 2;
         }
         finishHand();
-        if(game.active !== 4 && !game.boxes[game.active].ai) {
+        if(game.active !== null && !game.boxes[game.active].ai) {
           game.generalCooldown = DEAL_COOLDOWN * 10;
         } else {
           game.generalCooldown = DEAL_COOLDOWN;

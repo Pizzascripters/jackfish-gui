@@ -9,7 +9,7 @@
 
 #game canvas {
   width: 100%;
-  height: 75vh;
+  height: 70vh;
 }
 
 #actions button {
@@ -47,7 +47,18 @@ button.gray {
 }
 
 @media only screen and (max-width: 800px) {
+  #actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
   #actions button {
     font-size: 2.5vw;
+    width: 30%;
+    margin-bottom: 10px;
   }
+
+  /* #game canvas {
+    height: 70vh;
+  } */
 }

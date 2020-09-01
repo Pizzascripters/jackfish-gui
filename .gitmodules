@@ -1,0 +1,6 @@
+[submodule "Jackfish"]
+	path = Jackfish
+	url = https://github.com/Pizzascripters/Jackfish.git
+[submodule "public/js/Jackfish"]
+	path = public/Jackfish
+	url = https://github.com/Pizzascripters/Jackfish.git

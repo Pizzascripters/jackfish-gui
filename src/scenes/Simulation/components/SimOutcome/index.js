@@ -65,7 +65,7 @@ class SimOutcome extends React.Component {
       });
     }
     graphData.sort((a, b) => {
-      return a[3] > b[3];
+      return a[3] > b[3] ? 1 : -1;
     });
 
     // Ending graph data

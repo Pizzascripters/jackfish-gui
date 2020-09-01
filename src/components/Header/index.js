@@ -38,7 +38,7 @@ class Header extends React.Component {
     return <header>
       <Link
         name='Home'
-        text={'Jackfish Engine'}
+        text=<span>Jackfish <img src='Jackfish/img/headwhite-256.png' alt='Jackfish logo' /></span>
         homelink={true}
         page={this.props.page}
         onClick={this.props.onClick}
@@ -59,12 +59,30 @@ class HamburgerMenu extends React.Component {
     this.state = {
       dropped: false
     };
+
+    this.clickListener = e => {
+      if(e.target.className !== 'icon' && e.target.className !== 'fa fa-bars') {
+        this.setDropped(false);
+      }
+    }
+  }
+
+  componentDidMount() {
+    window.addEventListener('click', this.clickListener);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('click', this.clickListener);
   }
 
   toggle() {
     this.setState({
       dropped: !this.state.dropped
     });
+  }
+
+  setDropped(dropped) {
+    this.setState({ dropped });
   }
 
   render() {
@@ -75,7 +93,7 @@ class HamburgerMenu extends React.Component {
     return <header className={className}>
       <Link
         name='Home'
-        text={'Jackfish Engine'}
+        text=<span>Jackfish <img src='Jackfish/img/headwhite-256.png' alt='Jackfish logo' /></span>
         homelink={true}
         page={this.props.page}
         onClick={this.props.onClick}
