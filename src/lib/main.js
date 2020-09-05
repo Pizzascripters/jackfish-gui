@@ -156,6 +156,7 @@ window.startPractice = (jackfish) => {
       } else {
         numBoxes = 5;
       }
+      window.practice.numBoxesDetermined(numBoxes);
     }
     window.addEventListener('resize', setSize);
     setSize();
@@ -198,10 +199,12 @@ function finishHand() {
     game.dealCooldown = DEAL_COOLDOWN;
     game.active = null;
     game.stage = STAGES.REVEALING;
+    game.shoe.countCard(game.dealer[0]); // Count down card
   } else if(game.active === numBoxes && game.stage === STAGES.INSURANCE) {
     // Peek ace showing
     if(window.jackfish.getParams().peek && getValue(game.dealer) === Infinity) {
       game.stage = STAGES.REVEALING;
+      game.shoe.countCard(game.dealer[0]); // Count down card
       game.active = null;
     } else {
       game.active = 0;
@@ -276,11 +279,13 @@ function startFrameCycle(images_) {
   oldTime = 0;
   game = {};
   game.new = () => {
+    resetAnalysis();
+
     game.count = deepCopy(this.jackfish.getCount());
     game.cash = practiceParams.cash;
     game.originalBets = [0, 0, 0, 0, 0];
     game.bets = [0, 0, 0, 0, 0];
-    game.decks = game.count.decks;
+    game.decks = Math.ceil(game.count.decks);
     game.shoe = new Shoe(this.jackfish);
     game.boxes = [];
 
@@ -299,6 +304,28 @@ function startFrameCycle(images_) {
     }
 
     game.reset();
+
+    // Can't change the AI's bet
+    while (
+      game.active < numBoxes &&
+      game.boxes[game.active].ai
+    ) {
+      game.active++;
+    }
+    if(game.active >= numBoxes) {
+      game.active = null;
+    }
+    // Set first bet to table minimum
+    if(
+      game.active !== null &&
+      game.cash >= practiceParams.minimum // Safety for an absolutely rediculous edge case
+    ) {
+      // If not all AI
+      let minimum = practiceParams.minimum;
+      game.bets[game.active] = minimum;
+      game.originalBets[game.active] = minimum;
+      game.cash -= minimum;
+    }
   }
   game.reset = () => {
     game.stage = STAGES.BETTING;
@@ -641,9 +668,13 @@ function frame(time) {
   if(countEdge === null && game.count.system !== 'none') {
     if(!countTableRequested) {
       if(!makingAITables) {
-        this.jackfish.getCount().system = game.count.system;
         countTableRequested = true;
-        this.jackfish.doAll();
+        this.jackfish.setCount({
+          system: game.count.system,
+          count: game.count.count,
+          tc: game.count.tc,
+          decks: game.count.decks,
+        }, true);
         let listener = this.jackfish.addListener('doAll', () => {
           countEdge = this.jackfish.getEdge();
           countInsurance = this.jackfish.takeInsurance();
@@ -824,15 +855,6 @@ function frame(time) {
     }
   }
 
-  // Can't change the AI's bet
-  if(
-    game.stage === STAGES.BETTING &&
-    game.active !== null &&
-    game.boxes[game.active].ai
-  ) {
-    game.active = null;
-  }
-
   // AI betting
   if(game.stage === STAGES.BETTING) {
     game.boxes.forEach((box, i) => {
@@ -854,7 +876,7 @@ function frame(time) {
     let finishedPlayers = true;
     let finishedDealing = true;
     let minSize = Math.min(...game.players.map((player, i) => {
-      if(game.bets[i] < practiceParams.minimum) {
+      if(i >= numBoxes || game.bets[i] < practiceParams.minimum) {
         return Infinity;
       } else {
         return player.length;
@@ -862,6 +884,7 @@ function frame(time) {
     }));
     // Deal to each player
     game.players.forEach((player, i) => {
+      if(i >= numBoxes) return; // Don't deal to players that are off the table
       if(
         game.bets[i] >= practiceParams.minimum && // Must be betting at least table minimum
         player.length === minSize && // Deal if we have the smallest hand
@@ -880,7 +903,7 @@ function frame(time) {
       finishedDealing = false;
       if(game.dealCooldown <= 0) {
         game.dealCooldown = DEAL_COOLDOWN;
-        game.dealer.push(game.shoe.draw());
+        game.dealer.push(game.shoe.draw(game.dealer.length === 0));
       }
     }
 
@@ -896,6 +919,7 @@ function frame(time) {
       } else if(this.jackfish.getParams().peek && getValue(game.dealer) === Infinity) {
         // Peek 10 showing blackjack
         game.stage = STAGES.REVEALING;
+        game.shoe.countCard(game.dealer[0]); // Count down card
         game.active = null;
       } else {
         game.active = 0;
@@ -967,28 +991,31 @@ function frame(time) {
     text = 'Click to deal';
     if(makingAITables) {
       text = 'Making AI tables...';
+    } else if(game.bets.filter(bet => bet >= practiceParams.minimum).length === 0) {
+      // No bets are placed
+      text = 'Place a bet';
     }
   } else if(game.stage === STAGES.INSURANCE && game.dealer[1][0] === 'A') {
     text = 'Insurance?';
   }
   if(text) {
-    let fontSize = Math.floor(cvs.width / 8)
+    let fontSize = Math.floor(cvs.width / 12)
     ctx.fillStyle = '#fff';
     ctx.font = `${fontSize}px Noto Sans`;
     let width = ctx.measureText(text).width;
     let height = 96;
     let x = cvs.width / 2 - width / 2;
-    let y = cvs.height * .2;
+    let y = cvs.height * .3;
     ctx.fillText(text, x, y + height);
 
     // Click to deal events
-    if(game.stage === STAGES.BETTING) {
+    if(text === 'Click to deal') {
       let hover = mouse.x > x && mouse.x < x + width && mouse.y > y && mouse.y < y + height;
-      if(mouse.down && hover && !makingAITables) {
+      if(mouse.down && hover) {
         pointer = true;
         game.stage = STAGES.DEALING;
         game.active = null;
-      } else if(hover && !makingAITables) {
+      } else if(hover) {
         pointer = true;
       }
     }
@@ -1012,33 +1039,30 @@ function frame(time) {
 
 // A shoe that keeps count
 function Shoe(jackfish) {
-  let count = 0;
-  let hilo = 0;
-  let omega2 = 0;
-  let cards = [];
-
-  let comp = fillArray(4 * game.count.decks, 10);
-  comp[CARD_STATES.indexOf(10)] *= 4;
+  let count, hilo, omega2, cards, comp;
   shuffle();
 
-  this.draw = () => {
+  this.draw = (noCount) => {
     if(cards.length === 0) {
       shuffle();
     }
+    if(noCount) {
+      return cards.pop();
+    }
+    return this.countCard(cards.pop());
+  }
 
-    let card = cards.pop();
+  this.countCard = card => {
     comp[getCardIndex(card)]--; // Update comp
     if(game.count.system !== 'none') {
       const INDICES = SYSTEM_NAMES[game.count.system];
       count += INDICES[getCardIndex(card)];
-      hilo += HILO[getCardIndex(card)];
-      omega2 += OMEGA2[getCardIndex(card)];
-      countEdge = null;
-      countTable = null;
+      resetAnalysis(false, true);
       updateCount();
     }
-    perfectEdge = null;
-    perfectTable = null;
+    hilo += HILO[getCardIndex(card)];
+    omega2 += OMEGA2[getCardIndex(card)];
+    resetAnalysis(true, false);
     return card;
   }
 
@@ -1065,13 +1089,24 @@ function Shoe(jackfish) {
   this.getComp = () => vnormalize(comp);
 
   function updateCount() {
-    jackfish.getCount().count = count;
-    jackfish.getCount().tc = 52 * count / cards.length;
-    jackfish.getCount().decks = cards.length / 52;
+    jackfish.setCount({
+      system: game.count.system,
+      count: count,
+      tc: 52 * count / cards.length,
+      decks: cards.length / 52
+    });
   }
-  updateCount();
 
   function shuffle() {
+    // Reset counts and deck composition
+    count = 0;
+    hilo = 0;
+    omega2 = 0;
+    comp = fillArray(4 * game.count.decks, 10);
+    comp[CARD_STATES.indexOf(10)] *= 4;
+
+    resetAnalysis();
+
     // Create array of all cards in order
     let orderedCards = [];
     for(let i = 0; i < game.count.decks; i++) {
@@ -1180,6 +1215,15 @@ window.doAction = (action, ai) => {
 
 window.newGame = () => {
   game.new();
+}
+
+window.practice = {
+  numBoxesDetermined: numBoxes => {
+    if(window.practice.onNumBoxes) {
+      window.practice.onNumBoxes(numBoxes);
+    }
+  },
+  getNumBoxes: () => numBoxes
 }
 
 /*-- General Utility Functions --*/
@@ -1305,6 +1349,17 @@ function fillArray(value, len) {
     loop(0, len, () => a.push(value));
   }
   return a;
+}
+
+function resetAnalysis(noCount, noPerfect) {
+  if(!noCount) {
+    countTable = null;
+    countEdge = null;
+  }
+  if(!noPerfect) {
+    perfectTable = null;
+    perfectEdge = null;
+  }
 }
 
 /*-- Mathy Utility Functions --*/

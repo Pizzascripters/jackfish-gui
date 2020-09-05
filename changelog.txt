@@ -1,1 +1,11 @@
-1.0.1 - Initial Release - 8/31/20
+1.0 - Initial Release - 8/31/20
+
+  1.0.1 - Initial Release Hotfix 9/5/20
+  * Moved and resized insurance text to be mobile compatible
+  * User starts with bet placed
+  * Practice required bet to be placed before dealing
+  * User cannot add AI to inexistent box
+  * User must always have a box selected unless all boxes have AI
+  * Bug: Practice analysis refresh
+  * Bug: Practice analysis counts hole card
+  * Bug: Negative cards discarded with non-whole number decks

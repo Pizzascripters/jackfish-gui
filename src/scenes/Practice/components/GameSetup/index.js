@@ -11,6 +11,9 @@ class GameSetup extends React.Component {
     this.cash = this.props.cash;
     this.minimum = this.props.minimum;
     this.penetration = this.props.penetration;
+
+    this.numBoxes = window.practice.getNumBoxes();
+    window.practice.onNumBoxes = this.onNumBoxes.bind(this);
   }
 
   onChangeBox(i, state) {
@@ -42,14 +45,30 @@ class GameSetup extends React.Component {
     })
   }
 
+  onNumBoxes(numBoxes) {
+    this.numBoxes = numBoxes;
+    this.forceUpdate();
+  }
+
+  componentWillUnmount() {
+    window.practice.onNumBoxes = null;
+  }
+
   render() {
     this.onChange.bind(this)();
     return <div>
-      <BoxConfig number='1' onChange={this.onChangeBox.bind(this, 0)} box={this.boxes[0]}/>
-      <BoxConfig number='2' onChange={this.onChangeBox.bind(this, 1)} box={this.boxes[1]}/>
-      <BoxConfig number='3' onChange={this.onChangeBox.bind(this, 2)} box={this.boxes[2]}/>
-      <BoxConfig number='4' onChange={this.onChangeBox.bind(this, 3)} box={this.boxes[3]}/>
-      <BoxConfig number='5' onChange={this.onChangeBox.bind(this, 4)} box={this.boxes[4]}/><br />
+      {[0, 1, 2, 3, 4].map((n, i) => {
+        if(n < this.numBoxes) {
+          return <BoxConfig
+            key={i}
+            number={String(n+1)}
+            onChange={this.onChangeBox.bind(this, n)}
+            box={this.boxes[n]}
+          />
+        }
+        return null;
+      })}
+      <br />
       Starting Cash: $<Num value={this.cash} onChange={this.onChangeCash.bind(this)} /><br />
       Table Minimum: $<Num value={this.minimum} onChange={this.onChangeMinimum.bind(this)} /><br />
       Deck Penetration: <Num value={this.penetration} onChange={this.onChangePenetration.bind(this)} /><br />
