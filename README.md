@@ -1,11 +1,10 @@
-# Blackjack Engine
-A graphical interface built on top [Jackfish](http://github.com/Pizzascripters/Jackfish), a Blackjack computational engine. The GUI allows users to:
- * Generate strategy tables
- * Analyze the quality of each action (eg. hit, double) in a given situation
- * Play virtual Blackjack with engine assistance
- * Run simulations
+# Jackfish GUI
+A mobile-friendly graphical interface written in React for the JS Blackjack engine [Jackfish](http://github.com/Pizzascripters/Jackfish).
+Live demo available [here](https://blackjack-engine.herokuapp.com/).
 
-## Running
-Create a build of this project with `npm run build`.
-Otherwise, you can run a local development server with `npm run react-start`.
-Once the project is built, you can run the Express / React server with `npm start`. If no port is specified, the server will start on port 3000.
+## Development Setup
+Use `npm run react-start` to start a local development server.
+Jackfish will use your system's `PORT` environment variable if it is set, otherwise it defaults to `http://localhost:3000`.
+To change the port on Linux use `PORT=<PORT>` or `set PORT=<PORT>` on windows.
+
+Create a production build of the Jackfish GUI with `npm run build --prod` and deploy with `npm start`.
